@@ -36,3 +36,49 @@
     transform: rotate(360deg);
   }
 }
+
+.dashboard-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f4f8fb;
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+.dashboard-header {
+  background: #1976d2;
+  color: #fff;
+  padding: 2rem 0 1rem 0;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.dashboard-main {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 2rem;
+  padding: 2rem;
+  flex-wrap: wrap;
+}
+
+.dashboard-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+  padding: 2rem;
+  min-width: 250px;
+  max-width: 350px;
+  flex: 1 1 300px;
+  margin: 1rem 0;
+}
+
+.dashboard-footer {
+  background: #1976d2;
+  color: #fff;
+  text-align: center;
+  padding: 1rem 0;
+  font-size: 1rem;
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.05);
+}
