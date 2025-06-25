@@ -107,12 +107,67 @@ def city_aqi_trends():
             else:
                 trend = 'stable'
         else:
-            trend = 'insufficient data'
+            trend = 'stable'
         results[city] = {
             'monthly_avg_aqi': monthly.to_dict(orient='records'),
             'yearly_avg_aqi': yearly.to_dict(orient='records'),
             'spikes': spikes,
             'trend': trend
+        }
+    return jsonify(results)
+
+@app.route('/api/pollutant-composition')
+def pollutant_composition():
+    df = load_and_clean_data()
+    results = {}
+    for city, group in df.groupby('City'):
+        city_result = {}
+        total_aqi = group['AQI'].sum()
+        for pol in POLLUTANTS:
+            avg = group[pol].mean()
+            maxv = group[pol].max()
+            # Contribution: sum of pollutant divided by sum of all pollutants (or AQI)
+            pol_sum = group[pol].sum()
+            pct_contrib = (pol_sum / total_aqi * 100) if total_aqi else 0
+            city_result[pol] = {
+                'average': avg,
+                'max': maxv,
+                'percentage_contribution': pct_contrib
+            }
+        results[city] = city_result
+    return jsonify(results)
+
+@app.route('/api/temporal-patterns')
+def temporal_patterns():
+    df = load_and_clean_data()
+    df['Date'] = pd.to_datetime(df['Date'])
+    df['Year'] = df['Date'].dt.year
+    df['Month'] = df['Date'].dt.month
+    df['DayOfWeek'] = df['Date'].dt.dayofweek  # 0=Monday, 6=Sunday
+    df['IsWeekend'] = df['DayOfWeek'] >= 5
+    results = {}
+    for city, group in df.groupby('City'):
+        # Monthly average AQI
+        monthly = group.groupby(['Year', 'Month'])['AQI'].mean().reset_index()
+        # Weekday vs weekend
+        weekday_avg = group[~group['IsWeekend']]['AQI'].mean()
+        weekend_avg = group[group['IsWeekend']]['AQI'].mean()
+        # Daily trend (average AQI per day)
+        daily = group.groupby('Date')['AQI'].mean().reset_index()
+        # Weekly trend (average AQI per week)
+        group['Week'] = group['Date'].dt.isocalendar().week
+        weekly = group.groupby(['Year', 'Week'])['AQI'].mean().reset_index()
+        # Daily/weekly pollutant levels
+        pollutant_daily = group.groupby('Date')[POLLUTANTS].mean().reset_index()
+        pollutant_weekly = group.groupby(['Year', 'Week'])[POLLUTANTS].mean().reset_index()
+        results[city] = {
+            'monthly_avg_aqi': monthly.to_dict(orient='records'),
+            'weekday_avg_aqi': weekday_avg,
+            'weekend_avg_aqi': weekend_avg,
+            'daily_avg_aqi': daily.to_dict(orient='records'),
+            'weekly_avg_aqi': weekly.to_dict(orient='records'),
+            'pollutant_daily': pollutant_daily.to_dict(orient='records'),
+            'pollutant_weekly': pollutant_weekly.to_dict(orient='records')
         }
     return jsonify(results)
 
