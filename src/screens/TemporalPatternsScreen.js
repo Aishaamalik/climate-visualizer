@@ -12,6 +12,7 @@ import {
   Title,
   PointElement
 } from 'chart.js';
+import { useNotifications } from '../App';
 
 ChartJS.register(
   LineElement,
@@ -42,6 +43,7 @@ export default function TemporalPatternsScreen() {
   const [error, setError] = useState('');
   const [pollutantView, setPollutantView] = useState('daily');
   const [fadeIn, setFadeIn] = useState(false);
+  const { addNotification } = useNotifications();
 
   useEffect(() => {
     setLoading(true);
@@ -53,10 +55,20 @@ export default function TemporalPatternsScreen() {
         setSelectedCity(Object.keys(d)[0] || '');
         setLoading(false);
         setTimeout(() => setFadeIn(true), 100); // trigger fade-in
+        addNotification({
+          title: 'Temporal Patterns',
+          message: 'Temporal patterns data loaded successfully.',
+          time: new Date().toLocaleString()
+        });
       })
       .catch(() => {
         setError('Failed to fetch temporal patterns data.');
         setLoading(false);
+        addNotification({
+          title: 'Temporal Patterns',
+          message: 'Failed to load temporal patterns data.',
+          time: new Date().toLocaleString()
+        });
       });
   }, []);
 
@@ -137,49 +149,51 @@ export default function TemporalPatternsScreen() {
   console.log('pollutantValues:', pollutantValues);
 
   return (
-    <div className={`max-w-4xl mx-auto p-4 transition-opacity duration-700 ${fadeIn ? 'opacity-100' : 'opacity-0'}`}> 
-      <h2 className="text-2xl font-bold mb-6 text-center flex items-center justify-center gap-2">
+    <div className={`max-w-5xl mx-auto p-2 md:p-6 transition-opacity duration-700 ${fadeIn ? 'opacity-100' : 'opacity-0'}`}> 
+      <h2 className="text-2xl font-bold mb-8 text-center flex items-center justify-center gap-2">
         Temporal Patterns Analysis
         <span className="text-gray-400" title="Explore how air quality changes over time, by city and pollutant."><FaInfoCircle /></span>
       </h2>
-      <div className="mb-6 flex flex-col md:flex-row gap-4 justify-center items-center">
-        <div className="flex flex-col items-start">
-          <label className="mb-1 font-medium flex items-center gap-1">City <FaInfoCircle title="Select a city to view its air quality trends." /></label>
+      {/* Selector Card */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8 flex flex-col md:flex-row gap-6 items-center justify-center">
+        <div className="flex flex-col items-start w-full md:w-auto">
+          <label className="mb-1 font-semibold flex items-center gap-1">City <FaInfoCircle title="Select a city to view its air quality trends." /></label>
           <select
-            className={`p-2 rounded border dark:bg-gray-900 dark:border-gray-700 min-w-[200px] ${selectedCity ? 'ring-2 ring-blue-400' : ''}`}
+            className={`p-3 rounded-lg border dark:bg-gray-900 dark:border-gray-700 min-w-[200px] ${selectedCity ? 'ring-2 ring-blue-400' : ''}`}
             value={selectedCity}
             onChange={e => setSelectedCity(e.target.value)}
           >
             {cities.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
-        <div className="flex flex-col items-start">
-          <label className="mb-1 font-medium flex items-center gap-1">Pollutant <FaInfoCircle title="Choose a pollutant to analyze its trend." /></label>
+        <div className="flex flex-col items-start w-full md:w-auto">
+          <label className="mb-1 font-semibold flex items-center gap-1">Pollutant <FaInfoCircle title="Choose a pollutant to analyze its trend." /></label>
           <select
-            className={`p-2 rounded border dark:bg-gray-900 dark:border-gray-700 min-w-[200px] ${selectedPollutant ? 'ring-2 ring-purple-400' : ''}`}
+            className={`p-3 rounded-lg border dark:bg-gray-900 dark:border-gray-700 min-w-[200px] ${selectedPollutant ? 'ring-2 ring-purple-400' : ''}`}
             value={selectedPollutant}
             onChange={e => setSelectedPollutant(e.target.value)}
           >
             {POLLUTANTS.map(p => <option key={p} value={p}>{p}</option>)}
           </select>
         </div>
-        <div className="flex flex-col items-start">
-          <label className="mb-1 font-medium flex items-center gap-1">View <FaInfoCircle title="Switch between daily and weekly pollutant trends." /></label>
+        <div className="flex flex-col items-start w-full md:w-auto">
+          <label className="mb-1 font-semibold flex items-center gap-1">View <FaInfoCircle title="Switch between daily and weekly pollutant trends." /></label>
           <div className="flex gap-2">
             <button
-              className={`px-3 py-1 rounded ${pollutantView === 'daily' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700'} transition-colors`}
+              className={`px-4 py-2 rounded-lg font-semibold ${pollutantView === 'daily' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700'} transition-colors`}
               onClick={() => setPollutantView('daily')}
             >Daily</button>
             <button
-              className={`px-3 py-1 rounded ${pollutantView === 'weekly' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700'} transition-colors`}
+              className={`px-4 py-2 rounded-lg font-semibold ${pollutantView === 'weekly' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700'} transition-colors`}
               onClick={() => setPollutantView('weekly')}
             >Weekly</button>
           </div>
         </div>
       </div>
-      <div className="divide-y divide-gray-200 dark:divide-gray-700">
-        <section className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6 fade-in">
-          <div className="flex items-center justify-between mb-2">
+      {/* Chart Cards */}
+      <div className="flex flex-col gap-8">
+        <section className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 fade-in">
+          <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold">Monthly Average AQI</h3>
             <span className="text-gray-400 text-sm flex items-center gap-1"><FaInfoCircle title="Shows the average AQI for each month." />Monthly trend</span>
             <button className="ml-2 text-blue-600 hover:text-blue-800" title="Download chart as image" onClick={() => downloadChart('monthly-aqi-chart', 'monthly_aqi.png')}><FaDownload /></button>
@@ -190,8 +204,8 @@ export default function TemporalPatternsScreen() {
           }} options={{ responsive: true, plugins: { legend: { position: 'top' } } }} />
           <p className="mt-2 text-gray-500 text-sm">Track how air quality changes month by month.</p>
         </section>
-        <section className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6 fade-in">
-          <div className="flex items-center justify-between mb-2">
+        <section className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 fade-in">
+          <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold">Weekday vs Weekend AQI</h3>
             <span className="text-gray-400 text-sm flex items-center gap-1"><FaInfoCircle title="Compares average AQI on weekdays vs weekends." />Comparison</span>
             <button className="ml-2 text-blue-600 hover:text-blue-800" title="Download chart as image" onClick={() => downloadChart('weekday-weekend-chart', 'weekday_weekend_aqi.png')}><FaDownload /></button>
@@ -199,8 +213,8 @@ export default function TemporalPatternsScreen() {
           <Bar id="weekday-weekend-chart" data={weekdayWeekendData} options={{ responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }} />
           <p className="mt-2 text-gray-500 text-sm">See if weekends have better or worse air quality than weekdays.</p>
         </section>
-        <section className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6 fade-in">
-          <div className="flex items-center justify-between mb-2">
+        <section className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 fade-in">
+          <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold">Daily AQI Trend</h3>
             <span className="text-gray-400 text-sm flex items-center gap-1"><FaInfoCircle title="Shows the AQI for each day." />Fine-grained</span>
             <button className="ml-2 text-blue-600 hover:text-blue-800" title="Download chart as image" onClick={() => downloadChart('daily-aqi-chart', 'daily_aqi.png')}><FaDownload /></button>
@@ -211,8 +225,8 @@ export default function TemporalPatternsScreen() {
           }} options={{ responsive: true, plugins: { legend: { position: 'top' } } }} />
           <p className="mt-2 text-gray-500 text-sm">Observe daily fluctuations in air quality.</p>
         </section>
-        <section className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6 fade-in">
-          <div className="flex items-center justify-between mb-2">
+        <section className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 fade-in">
+          <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold">Weekly AQI Trend</h3>
             <span className="text-gray-400 text-sm flex items-center gap-1"><FaInfoCircle title="Shows the AQI for each week." />Smoothed</span>
             <button className="ml-2 text-blue-600 hover:text-blue-800" title="Download chart as image" onClick={() => downloadChart('weekly-aqi-chart', 'weekly_aqi.png')}><FaDownload /></button>
@@ -223,8 +237,8 @@ export default function TemporalPatternsScreen() {
           }} options={{ responsive: true, plugins: { legend: { position: 'top' } } }} />
           <p className="mt-2 text-gray-500 text-sm">Weekly averages help spot longer-term trends.</p>
         </section>
-        <section className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6 fade-in">
-          <div className="flex items-center justify-between mb-2">
+        <section className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 fade-in">
+          <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold">{selectedPollutant} {pollutantView === 'daily' ? 'Daily' : 'Weekly'} Trend</h3>
             <span className="text-gray-400 text-sm flex items-center gap-1"><FaInfoCircle title="Shows the trend for the selected pollutant." />Pollutant</span>
             <button className="ml-2 text-blue-600 hover:text-blue-800" title="Download chart as image" onClick={() => downloadChart('pollutant-trend-chart', 'pollutant_trend.png')}><FaDownload /></button>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Line } from 'react-chartjs-2';
 import { ArrowTrendingUpIcon, ArrowTrendingDownIcon, MinusIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
+import { useNotifications } from '../App';
 
 const TREND_COLORS = {
   improving: 'bg-green-100 text-green-800',
@@ -21,6 +22,7 @@ export default function CityTrendsScreen() {
   const [selectedCity, setSelectedCity] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { addNotification } = useNotifications();
 
   useEffect(() => {
     setLoading(true);
@@ -109,45 +111,62 @@ export default function CityTrendsScreen() {
   const worstMonth = monthly.reduce((worst, m) => (!worst || m.AQI > worst.AQI ? m : worst), null);
 
   return (
-    <div className="max-w-4xl mx-auto p-4">
-      <h2 className="text-2xl font-bold mb-6 text-center">City-Wise AQI Trends</h2>
-      <div className="mb-6 flex flex-col md:flex-row gap-4 justify-center items-center">
-        <select
-          className="p-2 rounded border dark:bg-gray-900 dark:border-gray-700 min-w-[200px]"
-          value={selectedCity}
-          onChange={e => setSelectedCity(e.target.value)}
-        >
-          {cities.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-blue-50 dark:bg-blue-900 rounded-lg p-4 flex flex-col items-center shadow">
-            <span className="text-xs text-gray-500 mb-1">Current AQI</span>
-            <span className="font-bold text-lg">{currentAQI ? currentAQI.toFixed(1) : 'N/A'}</span>
-            <span className="text-blue-700 dark:text-blue-200 font-semibold">Latest Month</span>
-          </div>
-          <div className="bg-green-50 dark:bg-green-900 rounded-lg p-4 flex flex-col items-center shadow">
-            <span className="text-xs text-gray-500 mb-1">Best Month</span>
-            <span className="font-bold text-lg">{bestMonth ? `${bestMonth.Year}-${String(bestMonth.Month).padStart(2, '0')}` : 'N/A'}</span>
-            <span className="text-green-700 dark:text-green-200 font-semibold">AQI: {bestMonth ? bestMonth.AQI.toFixed(1) : 'N/A'}</span>
-          </div>
-          <div className="bg-red-50 dark:bg-red-900 rounded-lg p-4 flex flex-col items-center shadow">
-            <span className="text-xs text-gray-500 mb-1">Worst Month</span>
-            <span className="font-bold text-lg">{worstMonth ? `${worstMonth.Year}-${String(worstMonth.Month).padStart(2, '0')}` : 'N/A'}</span>
-            <span className="text-red-700 dark:text-red-200 font-semibold">AQI: {worstMonth ? worstMonth.AQI.toFixed(1) : 'N/A'}</span>
-          </div>
+    <div className="max-w-5xl mx-auto p-2 md:p-6">
+      <h2 className="text-2xl font-bold mb-8 text-center">City-Wise AQI Trends</h2>
+      {/* City Selector Card */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8 flex flex-col md:flex-row items-center gap-6">
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <InformationCircleIcon className="w-6 h-6 text-blue-400" />
+          <label htmlFor="city-select" className="font-semibold text-gray-700 dark:text-gray-200">Select City:</label>
+          <select
+            id="city-select"
+            className="p-3 rounded-lg border dark:bg-gray-900 dark:border-gray-700 min-w-[200px]"
+            value={selectedCity}
+            onChange={e => setSelectedCity(e.target.value)}
+          >
+            {cities.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
         </div>
-        <div className={`rounded-lg px-4 py-2 flex items-center gap-2 font-semibold shadow ${TREND_COLORS[trend] || 'bg-gray-200 text-gray-600'}`}>
+        <div className={`rounded-full px-5 py-2 flex items-center gap-2 font-semibold shadow ${TREND_COLORS[trend] || 'bg-gray-200 text-gray-600'}`}> 
           {TREND_ICONS[trend]}
           <span className="capitalize">{trend}</span>
         </div>
       </div>
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="flex flex-col items-start bg-blue-50 dark:bg-blue-900 rounded-2xl shadow-lg p-6 border-t-4 border-blue-500">
+          <div className="bg-blue-100 dark:bg-blue-800 p-3 rounded-full mb-4"><ArrowTrendingUpIcon className="w-7 h-7 text-blue-600 dark:text-blue-300" /></div>
+          <div className="text-2xl font-bold mb-1">{currentAQI ? currentAQI.toFixed(1) : 'N/A'}</div>
+          <div className="text-sm text-gray-500">Current AQI</div>
+          <div className="text-xs text-blue-700 dark:text-blue-200 mt-2 font-semibold">Latest Month</div>
+        </div>
+        <div className="flex flex-col items-start bg-green-50 dark:bg-green-900 rounded-2xl shadow-lg p-6 border-t-4 border-green-500">
+          <div className="bg-green-100 dark:bg-green-800 p-3 rounded-full mb-4"><ArrowTrendingDownIcon className="w-7 h-7 text-green-600 dark:text-green-300" /></div>
+          <div className="text-2xl font-bold mb-1">{bestMonth ? `${bestMonth.Year}-${String(bestMonth.Month).padStart(2, '0')}` : 'N/A'}</div>
+          <div className="text-sm text-gray-500">Best Month</div>
+          <div className="text-xs text-green-700 dark:text-green-200 mt-2 font-semibold">AQI: {bestMonth ? bestMonth.AQI.toFixed(1) : 'N/A'}</div>
+        </div>
+        <div className="flex flex-col items-start bg-red-50 dark:bg-red-900 rounded-2xl shadow-lg p-6 border-t-4 border-red-500">
+          <div className="bg-red-100 dark:bg-red-800 p-3 rounded-full mb-4"><ArrowTrendingUpIcon className="w-7 h-7 text-red-600 dark:text-red-300" /></div>
+          <div className="text-2xl font-bold mb-1">{worstMonth ? `${worstMonth.Year}-${String(worstMonth.Month).padStart(2, '0')}` : 'N/A'}</div>
+          <div className="text-sm text-gray-500">Worst Month</div>
+          <div className="text-xs text-red-700 dark:text-red-200 mt-2 font-semibold">AQI: {worstMonth ? worstMonth.AQI.toFixed(1) : 'N/A'}</div>
+        </div>
+      </div>
+      {/* Chart Card */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold">AQI Trend Chart</h3>
+          <span className="text-gray-400 text-sm">Monthly and yearly AQI trends for the selected city.</span>
+        </div>
         <Line data={chartData} options={options} />
       </div>
-      <div className="mb-4">
-        <h3 className="font-semibold mb-2 flex items-center gap-2">Pollution Spikes (Months with AQI &gt; 90th percentile)
-          <InformationCircleIcon className="w-4 h-4 text-gray-400 cursor-pointer" title="These are months where AQI was unusually high (above 90th percentile)." />
-        </h3>
+      {/* Pollution Spikes Card */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8">
+        <div className="flex items-center gap-2 mb-4">
+          <h3 className="font-semibold">Pollution Spikes</h3>
+          <InformationCircleIcon className="w-5 h-5 text-gray-400 cursor-pointer" title="These are months where AQI was unusually high (above 90th percentile)." />
+        </div>
         {spikes.length === 0 ? (
           <div className="text-gray-400">No spikes detected.</div>
         ) : (
