@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 import os
 from datetime import datetime
-from scipy.stats import linregress
+from scipy.stats import linregress, pearsonr, spearmanr
 
 app = Flask(__name__)
 CORS(app)
@@ -169,6 +169,40 @@ def temporal_patterns():
             'pollutant_daily': pollutant_daily.to_dict(orient='records'),
             'pollutant_weekly': pollutant_weekly.to_dict(orient='records')
         }
+    return jsonify(results)
+
+@app.route('/api/correlation-analysis')
+def correlation_analysis():
+    df = load_and_clean_data()
+    # Select relevant columns
+    numeric_cols = [
+        'AQI', 'PM2.5 (µg/m³)', 'PM10 (µg/m³)', 'NO2 (ppb)', 'SO2 (ppb)', 'CO (ppm)', 'O3 (ppb)',
+        'Temperature (°C)', 'Humidity (%)', 'Wind Speed (m/s)'
+    ]
+    df_numeric = df[numeric_cols]
+    # 1. Pairwise correlations
+    results = {}
+    # AQI vs Temperature
+    results['AQI_Temperature'] = {
+        'pearson': pearsonr(df['AQI'], df['Temperature (°C)'])[0],
+        'spearman': spearmanr(df['AQI'], df['Temperature (°C)'])[0]
+    }
+    # PM2.5 vs Humidity
+    results['PM2.5_Humidity'] = {
+        'pearson': pearsonr(df['PM2.5 (µg/m³)'], df['Humidity (%)'])[0],
+        'spearman': spearmanr(df['PM2.5 (µg/m³)'], df['Humidity (%)'])[0]
+    }
+    # Wind Speed vs each pollutant
+    wind_corrs = {}
+    for pol in ['PM2.5 (µg/m³)', 'PM10 (µg/m³)', 'NO2 (ppb)', 'SO2 (ppb)', 'CO (ppm)', 'O3 (ppb)']:
+        wind_corrs[pol] = {
+            'pearson': pearsonr(df[pol], df['Wind Speed (m/s)'])[0],
+            'spearman': spearmanr(df[pol], df['Wind Speed (m/s)'])[0]
+        }
+    results['WindSpeed_Pollutants'] = wind_corrs
+    # 2. Heatmap of all numeric correlations
+    corr_matrix = df_numeric.corr(method='pearson')
+    results['correlation_heatmap'] = corr_matrix.round(3).to_dict()
     return jsonify(results)
 
 if __name__ == '__main__':
