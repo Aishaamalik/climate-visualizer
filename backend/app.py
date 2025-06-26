@@ -5,6 +5,7 @@ import numpy as np
 import os
 from datetime import datetime
 from scipy.stats import linregress, pearsonr, spearmanr
+from prophet import Prophet
 
 app = Flask(__name__)
 CORS(app)
@@ -78,10 +79,37 @@ def get_data():
         result.append(entry)
     return jsonify(result)
 
-# Optional: forecasting endpoint placeholder
 @app.route('/api/forecast')
 def forecast():
-    return jsonify({'message': 'Forecasting endpoint coming soon.'})
+    df = load_and_clean_data()
+    city = request.args.get('city')
+    pollutant = request.args.get('pollutant', 'AQI')
+    periods = int(request.args.get('periods', 30))  # days to forecast
+    if not city:
+        return jsonify({'error': 'City parameter is required.'}), 400
+    if pollutant not in df.columns:
+        return jsonify({'error': f'Pollutant {pollutant} not found.'}), 400
+    city_df = df[df['City'] == city][['Date', pollutant]].copy()
+    city_df['Date'] = pd.to_datetime(city_df['Date'])
+    city_df = city_df.sort_values('Date')
+    city_df = city_df.rename(columns={'Date': 'ds', pollutant: 'y'})
+    # Remove missing or non-numeric values
+    city_df = city_df.dropna()
+    city_df = city_df[city_df['y'].apply(lambda x: isinstance(x, (int, float, np.integer, np.floating)))]
+    if len(city_df) < 20:
+        return jsonify({'error': 'Not enough data for forecasting.'}), 400
+    model = Prophet()
+    model.fit(city_df)
+    future = model.make_future_dataframe(periods=periods)
+    forecast = model.predict(future)
+    # Mark which rows are historical and which are forecast
+    last_date = city_df['ds'].max()
+    forecast['type'] = forecast['ds'].apply(lambda d: 'historical' if d <= last_date else 'forecast')
+    # Prepare output: all rows, with type flag
+    result = forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper', 'type']].rename(columns={'ds': 'Date', 'yhat': 'Forecast', 'yhat_lower': 'Lower', 'yhat_upper': 'Upper'})
+    # Convert dates to ISO string for frontend
+    result['Date'] = result['Date'].dt.strftime('%Y-%m-%d')
+    return jsonify(result.to_dict(orient='records'))
 
 @app.route('/api/city-aqi-trends')
 def city_aqi_trends():
