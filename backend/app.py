@@ -233,5 +233,68 @@ def correlation_analysis():
     results['correlation_heatmap'] = corr_matrix.round(3).to_dict()
     return jsonify(results)
 
+@app.route('/api/comparative-analysis', methods=['POST'])
+def comparative_analysis():
+    df = load_and_clean_data()
+    data = request.get_json()
+    mode = data.get('mode', 'city')  # 'city' or 'country'
+    selections = data.get('selections', [])
+    if not selections or mode not in ['city', 'country']:
+        return jsonify({'error': 'Invalid request'}), 400
+    results = {}
+    for sel in selections:
+        if mode == 'city':
+            group = df[df['City'] == sel]
+        else:
+            group = df[df['Country'] == sel]
+        if group.empty:
+            continue
+        avg_aqi = float(group['AQI'].mean()) if not group['AQI'].mean() != group['AQI'].mean() else None
+        max_aqi = float(group['AQI'].max()) if not group['AQI'].max() != group['AQI'].max() else None
+        min_aqi = float(group['AQI'].min()) if not group['AQI'].min() != group['AQI'].min() else None
+        std_aqi = float(group['AQI'].std()) if not group['AQI'].std() != group['AQI'].std() else None
+        # Dominant pollutant: highest average among pollutants
+        pol_means = {pol: float(group[pol].mean()) if not group[pol].mean() != group[pol].mean() else None for pol in POLLUTANTS}
+        dominant_pol = max(pol_means, key=lambda k: pol_means[k] if pol_means[k] is not None else float('-inf'))
+        # Most variable pollutant
+        pol_stds = {pol: float(group[pol].std()) if not group[pol].std() != group[pol].std() else None for pol in POLLUTANTS}
+        most_variable_pol = max(pol_stds, key=lambda k: pol_stds[k] if pol_stds[k] is not None else float('-inf'))
+        # Pollutant composition for radar chart
+        pol_composition = pol_means
+        # Monthly and yearly trend
+        group = group.copy()
+        group['Date'] = pd.to_datetime(group['Date'])
+        group['Year'] = group['Date'].dt.year.astype(int)
+        group['Month'] = group['Date'].dt.month.astype(int)
+        monthly = group.groupby(['Year', 'Month'])['AQI'].mean().reset_index()
+        monthly['Year'] = monthly['Year'].astype(int)
+        monthly['Month'] = monthly['Month'].astype(int)
+        monthly['AQI'] = monthly['AQI'].astype(float)
+        yearly = group.groupby(['Year'])['AQI'].mean().reset_index()
+        yearly['Year'] = yearly['Year'].astype(int)
+        yearly['AQI'] = yearly['AQI'].astype(float)
+        # Recent AQI (last available month)
+        if not monthly.empty:
+            last_month = monthly.iloc[-1]
+            recent_aqi = float(last_month['AQI'])
+            recent_period = f"{int(last_month['Year'])}-{int(last_month['Month']):02d}"
+        else:
+            recent_aqi = None
+            recent_period = None
+        results[sel] = {
+            'average_aqi': avg_aqi,
+            'max_aqi': max_aqi,
+            'min_aqi': min_aqi,
+            'std_aqi': std_aqi,
+            'dominant_pollutant': dominant_pol,
+            'most_variable_pollutant': most_variable_pol,
+            'pollutant_composition': pol_composition,
+            'monthly_trend': monthly.to_dict(orient='records'),
+            'yearly_trend': yearly.to_dict(orient='records'),
+            'recent_aqi': recent_aqi,
+            'recent_period': recent_period
+        }
+    return jsonify(results)
+
 if __name__ == '__main__':
     app.run(debug=True) 
