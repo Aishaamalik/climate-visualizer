@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext, createContext } from 'react';
-import { Sun, Moon, UserCircle, Search, Bell, LogOut, HelpCircle, MessageSquare, BarChart2, MapPin, PieChart, Calendar, Activity } from 'lucide-react';
-import { TrendingUp, RefreshCw, Filter } from 'lucide-react';
+import { Sun, Moon, UserCircle, Search, Bell, LogOut, HelpCircle, MessageSquare, BarChart2, MapPin, PieChart, Calendar, Activity, TrendingUp } from 'lucide-react';
+import { RefreshCw, Filter } from 'lucide-react';
 import './index.css';
 import ChartSection from './components/ChartSection';
 import MapSection from './components/MapSection';
@@ -8,6 +8,7 @@ import CityTrendsScreen from './screens/CityTrendsScreen';
 import PollutantCompositionScreen from './screens/PollutantCompositionScreen';
 import TemporalPatternsScreen from './screens/TemporalPatternsScreen';
 import CorrelationAnalysisScreen from './screens/CorrelationAnalysisScreen';
+import ForecastingScreen from './screens/ForecastingScreen';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 
 const API_BASE = 'http://127.0.0.1:5000/api';
@@ -76,6 +77,7 @@ function SidebarNav() {
     { to: '/pollutant-composition', label: 'Pollutant Composition Analysis', icon: <PieChart size={20} /> },
     { to: '/temporal-patterns', label: 'Temporal Patterns Analysis', icon: <Calendar size={20} /> },
     { to: '/correlation-analysis', label: 'Correlation Analysis', icon: <Activity size={20} /> },
+    { to: '/forecasting', label: 'Forecasting Module', icon: <TrendingUp size={20} /> },
   ];
   return (
     <nav className="flex flex-col gap-2">
@@ -439,6 +441,7 @@ function App() {
                 <Route path="/pollutant-composition" element={<PollutantCompositionScreen />} />
                 <Route path="/temporal-patterns" element={<TemporalPatternsScreen />} />
                 <Route path="/correlation-analysis" element={<CorrelationAnalysisScreen />} />
+                <Route path="/forecasting" element={<ForecastingScreen />} />
               </Routes>
             </main>
           </div>
