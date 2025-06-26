@@ -9,6 +9,7 @@ import PollutantCompositionScreen from './screens/PollutantCompositionScreen';
 import TemporalPatternsScreen from './screens/TemporalPatternsScreen';
 import CorrelationAnalysisScreen from './screens/CorrelationAnalysisScreen';
 import ForecastingScreen from './screens/ForecastingScreen';
+import ComparativeAnalysisScreen from './screens/ComparativeAnalysisScreen';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 
 const API_BASE = 'http://127.0.0.1:5000/api';
@@ -78,6 +79,7 @@ function SidebarNav() {
     { to: '/temporal-patterns', label: 'Temporal Patterns Analysis', icon: <Calendar size={20} /> },
     { to: '/correlation-analysis', label: 'Correlation Analysis', icon: <Activity size={20} /> },
     { to: '/forecasting', label: 'Forecasting Module', icon: <TrendingUp size={20} /> },
+    { to: '/comparative-analysis', label: 'Comparative Analysis', icon: <BarChart2 size={20} /> },
   ];
   return (
     <nav className="flex flex-col gap-2">
@@ -442,6 +444,7 @@ function App() {
                 <Route path="/temporal-patterns" element={<TemporalPatternsScreen />} />
                 <Route path="/correlation-analysis" element={<CorrelationAnalysisScreen />} />
                 <Route path="/forecasting" element={<ForecastingScreen />} />
+                <Route path="/comparative-analysis" element={<ComparativeAnalysisScreen />} />
               </Routes>
             </main>
           </div>
