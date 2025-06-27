@@ -319,6 +319,18 @@ def temporal_patterns():
     df['Month'] = df['Date'].dt.month
     df['DayOfWeek'] = df['Date'].dt.dayofweek  # 0=Monday, 6=Sunday
     df['IsWeekend'] = df['DayOfWeek'] >= 5
+
+    # Demo: Static list of public holidays (ISO date strings)
+    # In real use, this should be country/city-specific and from a proper calendar API
+    PUBLIC_HOLIDAYS = set([
+        '2020-01-01', '2020-12-25', '2021-01-01', '2021-12-25',
+        '2022-01-01', '2022-12-25', '2023-01-01', '2023-12-25'
+    ])
+    # Demo: Static list of known extreme event dates (could be expanded)
+    EXTREME_EVENT_DATES = set([
+        '2020-09-15', '2021-06-10', '2022-03-20', '2023-07-05'
+    ])
+
     results = {}
     for city, group in df.groupby('City'):
         # Monthly average AQI
@@ -334,6 +346,63 @@ def temporal_patterns():
         # Daily/weekly pollutant levels
         pollutant_daily = group.groupby('Date')[POLLUTANTS].mean().reset_index()
         pollutant_weekly = group.groupby(['Year', 'Week'])[POLLUTANTS].mean().reset_index()
+
+        # --- Holiday/Event Effect ---
+        group['is_holiday'] = group['Date'].dt.strftime('%Y-%m-%d').isin(PUBLIC_HOLIDAYS)
+        holiday_days = group[group['is_holiday']]
+        non_holiday_days = group[~group['is_holiday']]
+        holiday_avg_aqi = holiday_days['AQI'].mean() if not holiday_days.empty else None
+        non_holiday_avg_aqi = non_holiday_days['AQI'].mean() if not non_holiday_days.empty else None
+        if holiday_avg_aqi is not None and non_holiday_avg_aqi is not None:
+            if holiday_avg_aqi < non_holiday_avg_aqi - 2:
+                event_effect = 'improved'
+            elif holiday_avg_aqi > non_holiday_avg_aqi + 2:
+                event_effect = 'worsened'
+            else:
+                event_effect = 'no_change'
+        else:
+            event_effect = 'insufficient_data'
+
+        # --- Extreme Event Highlight ---
+        aqi_99 = group['AQI'].quantile(0.99)
+        extreme_events = []
+        for _, row in group[group['AQI'] > aqi_99].iterrows():
+            date_str = row['Date'].strftime('%Y-%m-%d')
+            note = ''
+            if date_str in EXTREME_EVENT_DATES:
+                note = 'Known extreme event (e.g., forest fire, sandstorm)'
+            else:
+                note = 'Unusual AQI spike'
+            extreme_events.append({
+                'date': date_str,
+                'aqi': row['AQI'],
+                'note': note
+            })
+
+        # --- Year-over-Year Comparison ---
+        yoy = {}
+        for m in range(1, 13):
+            month_data = group[group['Month'] == m]
+            if not month_data.empty:
+                for y in sorted(month_data['Year'].unique()):
+                    m_int = int(m)
+                    y_int = int(y)
+                    if m_int not in yoy:
+                        yoy[m_int] = {}
+                    yoy[m_int][y_int] = float(month_data[month_data['Year'] == y]['AQI'].mean())
+
+        # --- Month-over-Month Comparison ---
+        mom = {}
+        for y in sorted(group['Year'].unique()):
+            year_data = group[group['Year'] == y]
+            for m in range(1, 13):
+                month_data = year_data[year_data['Month'] == m]
+                if not month_data.empty:
+                    y_int = int(y)
+                    if y_int not in mom:
+                        mom[y_int] = {}
+                    mom[y_int][m] = float(month_data['AQI'].mean())
+
         results[city] = {
             'monthly_avg_aqi': monthly.to_dict(orient='records'),
             'weekday_avg_aqi': weekday_avg,
@@ -341,7 +410,17 @@ def temporal_patterns():
             'daily_avg_aqi': daily.to_dict(orient='records'),
             'weekly_avg_aqi': weekly.to_dict(orient='records'),
             'pollutant_daily': pollutant_daily.to_dict(orient='records'),
-            'pollutant_weekly': pollutant_weekly.to_dict(orient='records')
+            'pollutant_weekly': pollutant_weekly.to_dict(orient='records'),
+            # New features:
+            'holiday_event_effect': {
+                'holiday_avg_aqi': holiday_avg_aqi,
+                'non_holiday_avg_aqi': non_holiday_avg_aqi,
+                'holiday_days': holiday_days['Date'].dt.strftime('%Y-%m-%d').tolist(),
+                'event_effect': event_effect
+            },
+            'extreme_events': extreme_events,
+            'year_over_year': yoy,
+            'month_over_month': mom
         }
     return jsonify(results)
 
@@ -506,12 +585,17 @@ def pollutant_composition_timelapse():
                 maxv = mgroup[pol].max()
                 pol_sum = mgroup[pol].sum()
                 pct_contrib = (pol_sum / mgroup['AQI'].sum() * 100) if mgroup['AQI'].sum() else 0
+                health_risks = POLLUTANT_HEALTH_RISKS.get(pol, [])
+                sources = POLLUTANT_SOURCES.get(pol, [])
+                # Dominant source: just pick the first source as a simple heuristic
+                dominant_source = sources[0] if sources else None
                 pols[pol] = {
                     'average': avg,
                     'max': maxv,
                     'percentage_contribution': pct_contrib,
-                    'health_risks': POLLUTANT_HEALTH_RISKS.get(pol, []),
-                    'sources': POLLUTANT_SOURCES.get(pol, [])
+                    'health_risks': health_risks,
+                    'sources': sources,
+                    'dominant_source': dominant_source
                 }
             month_data[month_key] = pols
         city_result['monthly'] = month_data
