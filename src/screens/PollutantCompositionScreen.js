@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Bar, Pie } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -10,7 +10,7 @@ import {
   Legend,
   Title,
 } from 'chart.js';
-import { InformationCircleIcon } from '@heroicons/react/24/outline';
+import { InformationCircleIcon, PlayIcon, PauseIcon } from '@heroicons/react/24/outline';
 import { useNotifications } from '../App';
 
 ChartJS.register(
@@ -41,14 +41,42 @@ const POLLUTANT_COLORS = [
   '#00838f'  // O3
 ];
 
+const HEALTH_ICONS = {
+  asthma: '🫁',
+  'lung cancer': '🎗️',
+  'heart disease': '❤️',
+  'respiratory issues': '😮‍💨',
+  'lung irritation': '😤',
+  bronchitis: '🤧',
+  headache: '🤕',
+  'lung function decline': '📉',
+};
+const SOURCE_ICONS = {
+  traffic: '🚗',
+  industry: '🏭',
+  'residential burning': '🏠',
+  construction: '🚧',
+  'road dust': '🛣️',
+  'power plants': '⚡',
+  'secondary formation': '🔄',
+};
+
 export default function PollutantCompositionScreen() {
+  // Old data for summary and static charts
   const [data, setData] = useState({});
   const [cities, setCities] = useState([]);
   const [selectedCity, setSelectedCity] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  // New data for time-lapse
+  const [timelapseData, setTimelapseData] = useState({});
+  const [months, setMonths] = useState([]);
+  const [selectedMonth, setSelectedMonth] = useState('');
+  const [playing, setPlaying] = useState(false);
+  const playRef = useRef();
   const { addNotification } = useNotifications();
 
+  // Fetch old data for summary/static charts
   useEffect(() => {
     setLoading(true);
     fetch('http://127.0.0.1:5000/api/pollutant-composition')
@@ -75,6 +103,41 @@ export default function PollutantCompositionScreen() {
       });
   }, []);
 
+  // Fetch new data for time-lapse
+  useEffect(() => {
+    fetch('http://127.0.0.1:5000/api/pollutant-composition-timelapse')
+      .then(res => res.json())
+      .then(d => {
+        setTimelapseData(d);
+        // Only set months/city if not already set by old data
+        if (!selectedCity && Object.keys(d).length > 0) {
+          setSelectedCity(Object.keys(d)[0]);
+        }
+        if (selectedCity && d[selectedCity]) {
+          const monthList = Object.keys(d[selectedCity].monthly).sort();
+          setMonths(monthList);
+          setSelectedMonth(monthList[0] || '');
+        }
+      });
+  }, [selectedCity]);
+
+  // Handle play/pause animation
+  useEffect(() => {
+    if (playing && months.length > 1) {
+      playRef.current = setInterval(() => {
+        setSelectedMonth(prev => {
+          const idx = months.indexOf(prev);
+          return months[(idx + 1) % months.length];
+        });
+      }, 1200);
+    } else {
+      clearInterval(playRef.current);
+    }
+    return () => clearInterval(playRef.current);
+  }, [playing, months]);
+
+  useEffect(() => { setPlaying(false); }, [selectedCity]);
+
   if (loading) return (
     <div className="p-8 text-center text-gray-400 animate-pulse">
       <div className="h-6 w-1/3 bg-gray-300 rounded mx-auto mb-4"></div>
@@ -86,12 +149,12 @@ export default function PollutantCompositionScreen() {
   if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
   if (!selectedCity) return <div className="p-8 text-center text-gray-400">No city data available.</div>;
 
+  // --- Old summary and static charts ---
   const cityData = data[selectedCity];
-  const pollutants = Object.keys(cityData);
+  const pollutants = cityData ? Object.keys(cityData) : [];
   const avgData = pollutants.map(p => cityData[p].average);
   const maxData = pollutants.map(p => cityData[p].max);
   const pctData = pollutants.map(p => cityData[p].percentage_contribution);
-
   // Find dominant pollutant
   const dominantIdx = pctData.indexOf(Math.max(...pctData));
   const dominantPollutant = pollutants[dominantIdx];
@@ -100,11 +163,63 @@ export default function PollutantCompositionScreen() {
   const highestValue = Math.max(...maxData);
   const highestIdx = maxData.indexOf(highestValue);
   const highestPollutant = pollutants[highestIdx];
-
   const barOptions = {
     responsive: true,
     plugins: { legend: { display: false } },
     scales: { y: { beginAtZero: true } }
+  };
+
+  // --- New time-lapse section ---
+  const cityTimelapse = timelapseData[selectedCity]?.monthly || {};
+  const monthData = cityTimelapse[selectedMonth] || {};
+  const timePollutants = Object.keys(monthData);
+  const timePctData = timePollutants.map(p => monthData[p].percentage_contribution);
+  const barData = {
+    labels: ['Pollutant Composition'],
+    datasets: timePollutants.map((pol, i) => ({
+      label: pol,
+      data: [timePctData[i]],
+      backgroundColor: POLLUTANT_COLORS[i % POLLUTANT_COLORS.length],
+      healthRisks: monthData[pol]?.health_risks || [],
+      sources: monthData[pol]?.sources || []
+    }))
+  };
+  const barOptionsTime = {
+    responsive: true,
+    plugins: {
+      legend: {
+        display: true,
+        position: 'top',
+        labels: {
+          generateLabels: chart => {
+            const ds = chart.data.datasets;
+            return ds.map((d, i) => ({
+              text: `${d.label}  ${d.healthRisks.map(r => HEALTH_ICONS[r] || '').join(' ')}  ${d.sources.map(s => SOURCE_ICONS[s] || '').join(' ')}`.trim(),
+              fillStyle: d.backgroundColor,
+              strokeStyle: d.backgroundColor,
+              index: i
+            }));
+          }
+        }
+      },
+      tooltip: {
+        callbacks: {
+          label: ctx => {
+            const d = ctx.dataset;
+            let label = `${d.label}: ${ctx.parsed.y?.toFixed(1)}%`;
+            if (d.healthRisks?.length) label += ` | Health: ${d.healthRisks.map(r => HEALTH_ICONS[r] || r).join(' ')}`;
+            if (d.sources?.length) label += ` | Sources: ${d.sources.map(s => SOURCE_ICONS[s] || s).join(' ')}`;
+            return label;
+          }
+        }
+      },
+      title: { display: false }
+    },
+    indexAxis: 'y',
+    scales: {
+      x: { stacked: true, min: 0, max: 100, title: { display: true, text: '% of AQI' } },
+      y: { stacked: true }
+    }
   };
 
   return (
@@ -119,7 +234,13 @@ export default function PollutantCompositionScreen() {
             id="city-select"
             className="p-3 rounded-lg border dark:bg-gray-900 dark:border-gray-700 min-w-[200px]"
             value={selectedCity}
-            onChange={e => setSelectedCity(e.target.value)}
+            onChange={e => {
+              setSelectedCity(e.target.value);
+              // Update months for time-lapse
+              const monthList = Object.keys(timelapseData[e.target.value]?.monthly || {}).sort();
+              setMonths(monthList);
+              setSelectedMonth(monthList[0] || '');
+            }}
           >
             {cities.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
@@ -137,12 +258,12 @@ export default function PollutantCompositionScreen() {
               </span>
             </span>
           </div>
-          <div className="text-blue-700 dark:text-blue-200 font-semibold text-xl">{dominantPct.toFixed(1)}%</div>
+          <div className="text-blue-700 dark:text-blue-200 font-semibold text-xl">{dominantPct?.toFixed(1)}%</div>
           <div className="text-xs text-gray-500 mt-2">Dominant Pollutant</div>
         </div>
         <div className="flex flex-col items-start bg-green-50 dark:bg-green-900 rounded-2xl shadow-lg p-6 border-t-4 border-green-500">
           <div className="bg-green-100 dark:bg-green-800 p-3 rounded-full mb-4"><InformationCircleIcon className="w-7 h-7 text-green-600 dark:text-green-300" /></div>
-          <div className="text-lg font-bold mb-1">{totalAQI.toFixed(1)}</div>
+          <div className="text-lg font-bold mb-1">{totalAQI?.toFixed(1)}</div>
           <div className="text-green-700 dark:text-green-200 font-semibold text-xl">AQI Units</div>
           <div className="text-xs text-gray-500 mt-2">Total Avg Pollutants</div>
         </div>
@@ -156,7 +277,7 @@ export default function PollutantCompositionScreen() {
               </span>
             </span>
           </div>
-          <div className="text-red-700 dark:text-red-200 font-semibold text-xl">{highestValue.toFixed(1)}</div>
+          <div className="text-red-700 dark:text-red-200 font-semibold text-xl">{highestValue?.toFixed(1)}</div>
           <div className="text-xs text-gray-500 mt-2">Highest Pollutant Value</div>
         </div>
       </div>
@@ -207,6 +328,31 @@ export default function PollutantCompositionScreen() {
           labels: pollutants,
           datasets: [{ data: pctData, backgroundColor: POLLUTANT_COLORS }]
         }} />
+      </div>
+      {/* --- New Time-lapse Animation Section --- */}
+      <h2 className="text-2xl font-bold mb-8 text-center">Pollutant Composition Time-lapse</h2>
+      {/* Time-lapse Controls */}
+      <div className="flex items-center gap-4 mb-6">
+        <button
+          className={`px-4 py-2 rounded-lg font-semibold shadow transition-colors ${playing ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 dark:text-white'}`}
+          onClick={() => setPlaying(p => !p)}
+        >
+          {playing ? <PauseIcon className="w-5 h-5 inline mr-1" /> : <PlayIcon className="w-5 h-5 inline mr-1" />}
+          {playing ? 'Pause' : 'Play'}
+        </button>
+        <input
+          type="range"
+          min={0}
+          max={months.length - 1}
+          value={months.indexOf(selectedMonth)}
+          onChange={e => setSelectedMonth(months[+e.target.value])}
+          className="w-64"
+        />
+        <span className="font-mono text-sm text-gray-700 dark:text-gray-200">{selectedMonth}</span>
+      </div>
+      {/* Stacked Bar Chart */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8">
+        <Bar data={barData} options={barOptionsTime} height={120} />
       </div>
     </div>
   );

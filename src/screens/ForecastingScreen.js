@@ -14,7 +14,7 @@ import {
   TimeScale
 } from 'chart.js';
 import 'chartjs-adapter-date-fns';
-import { InformationCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { InformationCircleIcon, ExclamationTriangleIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 
 ChartJS.register(
   CategoryScale,
@@ -76,6 +76,7 @@ const ForecastingScreen = () => {
   const [scenarioReduction, setScenarioReduction] = useState(0);
   const [showScenario, setShowScenario] = useState(false);
   const [pollutantSeries, setPollutantSeries] = useState(null);
+  const [showTable, setShowTable] = useState(false);
 
   useEffect(() => {
     axios.get('/api/cities').then(res => setCities(res.data));
@@ -133,22 +134,43 @@ const ForecastingScreen = () => {
   const forecastMap = Object.fromEntries(forecasted.map(f => [f.Date, f.Forecast]));
   const anomalyDates = anomalies.map(a => a.Date);
   // Build aligned data arrays
-  const histData = allDates.map(date => histMap[date] ?? null);
-  const forecastData = allDates.map(date => forecastMap[date] ?? null);
-  const anomalyPoints = allDates.map(date => anomalyDates.includes(date));
-  // Debug logs
+  let histData = allDates.map(date => histMap[date] ?? null);
+  let forecastData = allDates.map(date => forecastMap[date] ?? null);
+  let anomalyPoints = allDates.map(date => anomalyDates.includes(date));
+  // Show only the last 30 days for clarity, fallback to all if empty
+  const N = 30;
+  let allDatesSliced, histDataSliced, forecastDataSliced, anomalyPointsSliced;
+  if (allDates.length > N) {
+    const lastN = allDates.length - N;
+    allDatesSliced = allDates.slice(lastN);
+    histDataSliced = histData.slice(lastN);
+    forecastDataSliced = forecastData.slice(lastN);
+    anomalyPointsSliced = anomalyPoints.slice(lastN);
+    // If all are null, fallback to all data
+    if (!histDataSliced.some(v => v !== null) && !forecastDataSliced.some(v => v !== null)) {
+      allDatesSliced = allDates;
+      histDataSliced = histData;
+      forecastDataSliced = forecastData;
+      anomalyPointsSliced = anomalyPoints;
+    }
+  } else {
+    allDatesSliced = allDates;
+    histDataSliced = histData;
+    forecastDataSliced = forecastData;
+    anomalyPointsSliced = anomalyPoints;
+  }
   if (process.env.NODE_ENV !== 'production') {
-    console.log('Chart allDates:', allDates);
-    console.log('Chart histData:', histData);
-    console.log('Chart forecastData:', forecastData);
-    console.log('Chart anomalyPoints:', anomalyPoints);
+    console.log('allDatesSliced:', allDatesSliced);
+    console.log('histDataSliced:', histDataSliced);
+    console.log('forecastDataSliced:', forecastDataSliced);
+    console.log('anomalyPointsSliced:', anomalyPointsSliced);
   }
   const chartData = {
-    labels: allDates,
+    labels: allDatesSliced,
     datasets: [
       {
         label: 'Historical',
-        data: histData,
+        data: histDataSliced,
         borderColor: 'rgba(59,130,246,1)',
         backgroundColor: 'rgba(59,130,246,0.10)',
         pointBackgroundColor: 'rgba(59,130,246,1)',
@@ -156,29 +178,69 @@ const ForecastingScreen = () => {
         pointHoverBackgroundColor: '#fff',
         pointHoverBorderColor: 'rgba(59,130,246,1)',
         tension: 0.35,
-        pointRadius: 3,
-        pointHoverRadius: 5,
+        pointRadius: 0, // Hide points for historical
+        pointHoverRadius: 0,
         fill: false,
         borderWidth: 3,
         spanGaps: true,
         borderDash: [],
+        order: 1,
       },
       {
         label: 'Forecast',
-        data: forecastData,
+        data: forecastDataSliced,
         borderColor: 'rgba(16,185,129,1)',
         backgroundColor: 'rgba(16,185,129,0.10)',
-        pointBackgroundColor: anomalyPoints.map(isAnomaly => isAnomaly ? 'rgba(239,68,68,1)' : 'rgba(16,185,129,1)'),
+        pointBackgroundColor: 'rgba(16,185,129,1)',
         pointBorderColor: '#fff',
         pointHoverBackgroundColor: '#fff',
         pointHoverBorderColor: 'rgba(16,185,129,1)',
         tension: 0.35,
-        pointRadius: 4,
-        pointHoverRadius: 6,
+        pointRadius: 0, // Hide points for forecast
+        pointHoverRadius: 0,
         fill: false,
         borderWidth: 3,
         spanGaps: true,
         borderDash: [8, 6],
+        order: 2,
+      },
+      // Confidence interval as a background area
+      {
+        label: 'Confidence Interval',
+        data: forecasted.map(f => f.Upper),
+        type: 'line',
+        borderWidth: 0,
+        pointRadius: 0,
+        fill: '+1',
+        backgroundColor: 'rgba(16,185,129,0.10)',
+        borderColor: 'rgba(16,185,129,0)',
+        order: 0,
+        hidden: false,
+      },
+      {
+        label: '',
+        data: forecasted.map(f => f.Lower),
+        type: 'line',
+        borderWidth: 0,
+        pointRadius: 0,
+        fill: false,
+        backgroundColor: 'rgba(16,185,129,0.10)',
+        borderColor: 'rgba(16,185,129,0)',
+        order: 0,
+        hidden: false,
+      },
+      // Anomalies as large red dots
+      {
+        label: 'Anomaly',
+        data: forecastDataSliced.map((v, i) => anomalyPointsSliced[i] ? v : null),
+        borderColor: 'rgba(239,68,68,1)',
+        backgroundColor: 'rgba(239,68,68,1)',
+        pointRadius: 7,
+        pointHoverRadius: 10,
+        type: 'scatter',
+        showLine: false,
+        fill: false,
+        order: 3,
       },
     ],
   };
@@ -208,9 +270,17 @@ const ForecastingScreen = () => {
         cornerRadius: 8,
         callbacks: {
           label: function(context) {
+            if (context.dataset.label === 'Anomaly') {
+              return `Anomaly: ${context.parsed.y !== null ? context.parsed.y.toFixed(2) : ''}`;
+            }
+            if (context.dataset.label === 'Confidence Interval' || context.dataset.label === '') {
+              return null;
+            }
             return `${context.dataset.label}: ${context.parsed.y !== null ? context.parsed.y.toFixed(2) : ''}`;
           },
         },
+        mode: 'index',
+        intersect: false,
       },
       title: { display: false },
     },
@@ -218,16 +288,31 @@ const ForecastingScreen = () => {
       x: {
         type: 'category',
         title: { display: true, text: 'Date', color: isDark ? '#fff' : '#1e293b' },
-        ticks: { color: isDark ? '#fff' : '#1e293b' },
+        ticks: {
+          color: isDark ? '#fff' : '#1e293b',
+          maxRotation: 60,
+          minRotation: 45,
+          autoSkip: true,
+          maxTicksLimit: 7, // Show only every 7th date
+          callback: function(value, index, ticks) {
+            // Only show every 7th label
+            return index % 7 === 0 ? this.getLabelForValue(this.getLabelForValue(value)) : '';
+          }
+        },
         grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' },
       },
       y: {
-        title: { display: true, text: 'AQI', color: isDark ? '#fff' : '#1e293b' },
+        title: { display: true, text: selectedPollutant, color: isDark ? '#fff' : '#1e293b' },
         ticks: { color: isDark ? '#fff' : '#1e293b' },
         grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' },
       },
     },
   };
+
+  // Summary stats
+  const lastForecast = forecasted.length > 0 ? forecasted[forecasted.length - 1].Forecast : null;
+  const avgNext7 = forecasted.slice(0, 7).reduce((acc, f) => acc + (f.Forecast || 0), 0) / (forecasted.slice(0, 7).length || 1);
+  const anomalyCount = anomalies.length;
 
   // UI/UX: sticky selection panel
   return (
@@ -272,6 +357,21 @@ const ForecastingScreen = () => {
           </button>
         </div>
       </div>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="bg-blue-50 dark:bg-blue-900 rounded-xl p-4 text-center">
+          <div className="text-xs text-gray-500 dark:text-gray-200 mb-1">Next 7-day Avg</div>
+          <div className="text-2xl font-bold text-blue-700 dark:text-blue-200">{isNaN(avgNext7) ? 'N/A' : avgNext7.toFixed(1)}</div>
+        </div>
+        <div className="bg-green-50 dark:bg-green-900 rounded-xl p-4 text-center">
+          <div className="text-xs text-gray-500 dark:text-gray-200 mb-1">Last Forecasted Value</div>
+          <div className="text-2xl font-bold text-green-700 dark:text-green-200">{lastForecast !== null ? lastForecast.toFixed(1) : 'N/A'}</div>
+        </div>
+        <div className="bg-yellow-50 dark:bg-yellow-900 rounded-xl p-4 text-center">
+          <div className="text-xs text-gray-500 dark:text-gray-200 mb-1">Anomaly Days</div>
+          <div className="text-2xl font-bold text-yellow-700 dark:text-yellow-200">{anomalyCount}</div>
+        </div>
+      </div>
       {/* Scenario Controls */}
       {showScenario && (
         <div className="mb-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 flex flex-col md:flex-row gap-4 items-end">
@@ -294,15 +394,54 @@ const ForecastingScreen = () => {
       {anomalies.length > 0 && (
         <div className="flex items-center gap-2 p-4 mb-6 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded-xl">
           <ExclamationTriangleIcon className="w-6 h-6" />
-          <span>Warning: {anomalies.length} forecasted day(s) exceed the anomaly threshold (AQI &gt; {anomalyThreshold && anomalyThreshold.toFixed(1)}).</span>
+          <span>Warning: {anomalies.length} forecasted day(s) exceed the anomaly threshold ({selectedPollutant} &gt; {anomalyThreshold && anomalyThreshold.toFixed(1)}).</span>
         </div>
       )}
       {/* Chart Section */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8" style={{ minHeight: 400 }}>
         {loading ? <Spinner /> : (
-          allDates.length > 0 && (histData.some(v => v !== null) || forecastData.some(v => v !== null)) ?
-            <Line data={chartData} options={chartOptions} height={400} /> :
+          allDatesSliced.length > 0 && (histDataSliced.some(v => v !== null) || forecastDataSliced.some(v => v !== null)) ?
+            <div className="w-full max-w-[900px] h-[400px] mx-auto">
+              <Line data={chartData} options={chartOptions} key={allDatesSliced.join('-')} />
+            </div>
+            :
             <div className="text-center text-gray-400 dark:text-gray-300 py-16 text-lg">No data available for the selected city and pollutant.</div>
+        )}
+      </div>
+      {/* Collapsible Table */}
+      <div className="mb-8">
+        <button
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 dark:text-white font-semibold shadow hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors mb-2"
+          onClick={() => setShowTable(v => !v)}
+        >
+          {showTable ? <ChevronUpIcon className="w-5 h-5" /> : <ChevronDownIcon className="w-5 h-5" />}
+          {showTable ? 'Hide' : 'Show'} Forecast Table
+        </button>
+        {showTable && (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 overflow-x-auto">
+            <table className="min-w-full text-sm text-left rounded-xl overflow-hidden">
+              <thead>
+                <tr className="bg-gray-100 dark:bg-gray-700">
+                  <th className="px-2 py-1 text-gray-900 dark:text-white">Date</th>
+                  <th className="px-2 py-1 text-gray-900 dark:text-white">Type</th>
+                  <th className="px-2 py-1 text-gray-900 dark:text-white">Forecast</th>
+                  <th className="px-2 py-1 text-gray-900 dark:text-white">Lower</th>
+                  <th className="px-2 py-1 text-gray-900 dark:text-white">Upper</th>
+                </tr>
+              </thead>
+              <tbody>
+                {forecast.map((row, i) => (
+                  <tr key={i} className="even:bg-gray-50 dark:even:bg-gray-900">
+                    <td className="px-2 py-1 text-gray-800 dark:text-white">{row.Date}</td>
+                    <td className="px-2 py-1 text-gray-800 dark:text-white">{row.type}</td>
+                    <td className="px-2 py-1 text-gray-800 dark:text-white">{row.Forecast?.toFixed(2)}</td>
+                    <td className="px-2 py-1 text-gray-800 dark:text-white">{row.Lower?.toFixed(2)}</td>
+                    <td className="px-2 py-1 text-gray-800 dark:text-white">{row.Upper?.toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
       {/* Scenario Table */}
