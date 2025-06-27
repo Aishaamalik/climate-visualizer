@@ -22,6 +22,53 @@ def load_and_clean_data():
     df_clean = df_clean.sort_values(['Country', 'City', 'Date'])
     return df_clean
 
+def partial_correlation(x, y, control_vars):
+    """
+    Calculate partial correlation between x and y, controlling for control_vars.
+    Uses the formula: partial_corr = (r_xy - r_xz * r_yz) / sqrt((1 - r_xz^2) * (1 - r_yz^2))
+    """
+    # Create a combined dataset with all variables
+    data = pd.DataFrame({'x': x, 'y': y})
+    for i, var in enumerate(control_vars):
+        data[f'z{i}'] = var
+    
+    # Remove rows with any NaN values
+    data = data.dropna()
+    
+    if len(data) < 3:  # Need at least 3 observations
+        return None
+    
+    # Calculate correlation matrix
+    corr_matrix = data.corr()
+    
+    # Get the correlation between x and y
+    r_xy = corr_matrix.loc['x', 'y']
+    
+    # Calculate the correlation between x and control variables (average)
+    r_xz = 0
+    r_yz = 0
+    z_count = 0
+    
+    for i in range(len(control_vars)):
+        if f'z{i}' in corr_matrix.columns:
+            r_xz += corr_matrix.loc['x', f'z{i}']
+            r_yz += corr_matrix.loc['y', f'z{i}']
+            z_count += 1
+    
+    if z_count == 0:
+        return r_xy
+    
+    r_xz /= z_count
+    r_yz /= z_count
+    
+    # Calculate partial correlation
+    denominator = np.sqrt((1 - r_xz**2) * (1 - r_yz**2))
+    if denominator == 0:
+        return None
+    
+    partial_corr = (r_xy - r_xz * r_yz) / denominator
+    return partial_corr
+
 @app.route('/')
 def home():
     return "Climate Visualizer API is running. See /api/countries, /api/cities, /api/pollutants, /api/data."
@@ -245,30 +292,73 @@ def correlation_analysis():
         'AQI', 'PM2.5 (µg/m³)', 'PM10 (µg/m³)', 'NO2 (ppb)', 'SO2 (ppb)', 'CO (ppm)', 'O3 (ppb)',
         'Temperature (°C)', 'Humidity (%)', 'Wind Speed (m/s)'
     ]
-    df_numeric = df[numeric_cols]
-    # 1. Pairwise correlations
+    df_numeric = df[numeric_cols].copy()
     results = {}
+    # 1. Pairwise correlations + scatterplot data + regression
+    def scatter_and_reg(x, y):
+        mask = (~pd.isnull(x)) & (~pd.isnull(y))
+        x, y = x[mask], y[mask]
+        if len(x) < 2:
+            return {'x': [], 'y': [], 'slope': None, 'intercept': None, 'r2': None}
+        slope, intercept, r, _, _ = linregress(x, y)
+        return {
+            'x': x.tolist(),
+            'y': y.tolist(),
+            'slope': slope,
+            'intercept': intercept,
+            'r2': r**2
+        }
     # AQI vs Temperature
     results['AQI_Temperature'] = {
         'pearson': pearsonr(df['AQI'], df['Temperature (°C)'])[0],
-        'spearman': spearmanr(df['AQI'], df['Temperature (°C)'])[0]
+        'spearman': spearmanr(df['AQI'], df['Temperature (°C)'])[0],
+        'scatter': scatter_and_reg(df['Temperature (°C)'], df['AQI'])
     }
     # PM2.5 vs Humidity
     results['PM2.5_Humidity'] = {
         'pearson': pearsonr(df['PM2.5 (µg/m³)'], df['Humidity (%)'])[0],
-        'spearman': spearmanr(df['PM2.5 (µg/m³)'], df['Humidity (%)'])[0]
+        'spearman': spearmanr(df['PM2.5 (µg/m³)'], df['Humidity (%)'])[0],
+        'scatter': scatter_and_reg(df['Humidity (%)'], df['PM2.5 (µg/m³)'])
     }
     # Wind Speed vs each pollutant
     wind_corrs = {}
     for pol in ['PM2.5 (µg/m³)', 'PM10 (µg/m³)', 'NO2 (ppb)', 'SO2 (ppb)', 'CO (ppm)', 'O3 (ppb)']:
         wind_corrs[pol] = {
             'pearson': pearsonr(df[pol], df['Wind Speed (m/s)'])[0],
-            'spearman': spearmanr(df[pol], df['Wind Speed (m/s)'])[0]
+            'spearman': spearmanr(df[pol], df['Wind Speed (m/s)'])[0],
+            'scatter': scatter_and_reg(df['Wind Speed (m/s)'], df[pol])
         }
     results['WindSpeed_Pollutants'] = wind_corrs
     # 2. Heatmap of all numeric correlations
     corr_matrix = df_numeric.corr(method='pearson')
     results['correlation_heatmap'] = corr_matrix.round(3).to_dict()
+    # 3. Time-lag correlations (AQI vs weather, lags 1-5)
+    lags = [1, 2, 3, 4, 5]
+    lag_vars = ['Temperature (°C)', 'Humidity (%)', 'Wind Speed (m/s)']
+    lag_corrs = {}
+    df_sorted = df.sort_values('Date')
+    for var in lag_vars:
+        lag_corrs[var] = {}
+        for lag in lags:
+            shifted = df_sorted[var].shift(lag)
+            mask = (~pd.isnull(df_sorted['AQI'])) & (~pd.isnull(shifted))
+            if mask.sum() < 2:
+                lag_corrs[var][lag] = None
+            else:
+                lag_corrs[var][lag] = pearsonr(df_sorted['AQI'][mask], shifted[mask])[0]
+    results['time_lag_correlations'] = lag_corrs
+    # 4. Partial correlations (AQI vs each weather, controlling for others)
+    # Use partial_correlation function
+    partial_corrs = {}
+    weather_vars = ['Temperature (°C)', 'Humidity (%)', 'Wind Speed (m/s)']
+    for var in weather_vars:
+        others = [v for v in weather_vars if v != var]
+        partial_corrs[var] = partial_correlation(
+            df_numeric['AQI'],
+            df_numeric[var],
+            [df_numeric[other] for other in others]
+        )
+    results['partial_correlations'] = partial_corrs
     return jsonify(results)
 
 @app.route('/api/comparative-analysis', methods=['POST'])
