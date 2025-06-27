@@ -56,6 +56,8 @@ export default function CityTrendsScreen() {
   const yearly = cityData.yearly_avg_aqi;
   const spikes = cityData.spikes;
   const trend = cityData.trend;
+  const healthImpact = cityData.health_impact;
+  const seasonalHighlights = cityData.seasonal_highlights || [];
 
   // Prepare chart data
   const monthlyLabels = monthly.map(m => `${m.Year}-${String(m.Month).padStart(2, '0')}`);
@@ -133,7 +135,7 @@ export default function CityTrendsScreen() {
         </div>
       </div>
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div className="flex flex-col items-start bg-blue-50 dark:bg-blue-900 rounded-2xl shadow-lg p-6 border-t-4 border-blue-500">
           <div className="bg-blue-100 dark:bg-blue-800 p-3 rounded-full mb-4"><ArrowTrendingUpIcon className="w-7 h-7 text-blue-600 dark:text-blue-300" /></div>
           <div className="text-2xl font-bold mb-1">{currentAQI ? currentAQI.toFixed(1) : 'N/A'}</div>
@@ -152,6 +154,13 @@ export default function CityTrendsScreen() {
           <div className="text-sm text-gray-500">Worst Month</div>
           <div className="text-xs text-red-700 dark:text-red-200 mt-2 font-semibold">AQI: {worstMonth ? worstMonth.AQI.toFixed(1) : 'N/A'}</div>
         </div>
+        {/* Health Impact Card */}
+        <div className="flex flex-col items-start bg-yellow-50 dark:bg-yellow-900 rounded-2xl shadow-lg p-6 border-t-4 border-yellow-500">
+          <div className="bg-yellow-100 dark:bg-yellow-800 p-3 rounded-full mb-4"><InformationCircleIcon className="w-7 h-7 text-yellow-600 dark:text-yellow-300" /></div>
+          <div className="text-lg font-bold mb-1">{healthImpact?.category || 'N/A'}</div>
+          <div className="text-yellow-700 dark:text-yellow-200 font-semibold text-xl">{healthImpact?.aqi !== undefined && healthImpact?.aqi !== null ? healthImpact.aqi.toFixed(1) : 'N/A'}</div>
+          <div className="text-xs text-gray-500 mt-2">{healthImpact?.description}</div>
+        </div>
       </div>
       {/* Chart Card */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8">
@@ -161,6 +170,23 @@ export default function CityTrendsScreen() {
         </div>
         <Line data={chartData} options={options} />
       </div>
+      {/* Seasonal Trend Highlights */}
+      {seasonalHighlights.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <h3 className="font-semibold">Seasonal Trend Highlights</h3>
+            <InformationCircleIcon className="w-5 h-5 text-gray-400 cursor-pointer" title="Months with consistently high (spike) or low (drop) AQI across years." />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {seasonalHighlights.map((h, i) => (
+              <div key={i} className={`p-4 rounded-xl shadow flex flex-col gap-1 ${h.type === 'spike' ? 'bg-red-50 dark:bg-red-900' : 'bg-green-50 dark:bg-green-900'}`}>
+                <div className="font-bold text-lg">{h.type === 'spike' ? 'Spike' : 'Drop'}: Month {h.month}</div>
+                <div className="text-gray-700 dark:text-gray-200">Avg AQI: <span className="font-semibold">{h.avg_aqi.toFixed(1)}</span></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       {/* Pollution Spikes Card */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8">
         <div className="flex items-center gap-2 mb-4">
