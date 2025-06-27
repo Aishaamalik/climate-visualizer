@@ -14,6 +14,24 @@ DATA_PATH = os.path.join(os.path.dirname(__file__), 'global_air_quality_dataset.
 
 POLLUTANTS = ['PM2.5 (µg/m³)', 'PM10 (µg/m³)', 'NO2 (ppb)', 'SO2 (ppb)', 'CO (ppm)', 'O3 (ppb)']
 
+# Health risks and sources for each pollutant
+POLLUTANT_HEALTH_RISKS = {
+    'PM2.5 (µg/m³)': ['asthma', 'lung cancer', 'heart disease'],
+    'PM10 (µg/m³)': ['asthma', 'respiratory issues'],
+    'NO2 (ppb)': ['asthma', 'lung irritation'],
+    'SO2 (ppb)': ['asthma', 'bronchitis'],
+    'CO (ppm)': ['headache', 'heart disease'],
+    'O3 (ppb)': ['asthma', 'lung function decline']
+}
+POLLUTANT_SOURCES = {
+    'PM2.5 (µg/m³)': ['traffic', 'industry', 'residential burning'],
+    'PM10 (µg/m³)': ['construction', 'road dust', 'industry'],
+    'NO2 (ppb)': ['traffic', 'power plants'],
+    'SO2 (ppb)': ['industry', 'power plants'],
+    'CO (ppm)': ['traffic', 'residential burning'],
+    'O3 (ppb)': ['secondary formation', 'traffic', 'industry']
+}
+
 # Utility to load and clean data
 
 def load_and_clean_data():
@@ -126,12 +144,20 @@ def get_data():
         result.append(entry)
     return jsonify(result)
 
-@app.route('/api/forecast')
+@app.route('/api/forecast', methods=['GET', 'POST'])
 def forecast():
     df = load_and_clean_data()
-    city = request.args.get('city')
-    pollutant = request.args.get('pollutant', 'AQI')
-    periods = int(request.args.get('periods', 30))  # days to forecast
+    if request.method == 'POST':
+        data = request.get_json()
+        city = data.get('city')
+        pollutant = data.get('pollutant', 'AQI')
+        periods = int(data.get('periods', 30))
+        emission_reduction = data.get('emission_reduction', None)
+    else:
+        city = request.args.get('city')
+        pollutant = request.args.get('pollutant', 'AQI')
+        periods = int(request.args.get('periods', 30))
+        emission_reduction = None
     if not city:
         return jsonify({'error': 'City parameter is required.'}), 400
     if pollutant not in df.columns:
@@ -145,6 +171,24 @@ def forecast():
     city_df = city_df[city_df['y'].apply(lambda x: isinstance(x, (int, float, np.integer, np.floating)))]
     if len(city_df) < 20:
         return jsonify({'error': 'Not enough data for forecasting.'}), 400
+    # Apply emission reduction scenario if provided
+    pollutant_series = None
+    if emission_reduction:
+        # For each pollutant in emission_reduction, reduce its value in the city_df
+        for pol, reduction in emission_reduction.items():
+            if pol in df.columns:
+                # Apply reduction to the pollutant column for the forecast period
+                # Only for future dates, not historical
+                # For simplicity, reduce the last known value by the reduction percent
+                last_val = city_df['y'].iloc[-1] if pollutant == pol else df[df['City'] == city][pol].dropna().iloc[-1]
+                reduced_val = last_val * (1 - reduction)
+                # Create a new series for the forecast period
+                pollutant_series = []
+                for i in range(periods):
+                    pollutant_series.append({
+                        'ds': (city_df['ds'].max() + pd.Timedelta(days=i+1)).strftime('%Y-%m-%d'),
+                        pol: reduced_val
+                    })
     model = Prophet()
     model.fit(city_df)
     future = model.make_future_dataframe(periods=periods)
@@ -156,7 +200,24 @@ def forecast():
     result = forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper', 'type']].rename(columns={'ds': 'Date', 'yhat': 'Forecast', 'yhat_lower': 'Lower', 'yhat_upper': 'Upper'})
     # Convert dates to ISO string for frontend
     result['Date'] = result['Date'].dt.strftime('%Y-%m-%d')
-    return jsonify(result.to_dict(orient='records'))
+    # Split historical and forecast for frontend
+    historical = result[result['type'] == 'historical'].to_dict(orient='records')
+    forecasted = result[result['type'] == 'forecast'].to_dict(orient='records')
+    # Anomaly detection: flag forecasted days above a threshold (e.g., 90th percentile of historical)
+    anomaly_threshold = None
+    anomalies = []
+    if len(historical) > 0 and len(forecasted) > 0:
+        hist_vals = [h['Forecast'] for h in historical if h['Forecast'] is not None]
+        if hist_vals:
+            anomaly_threshold = float(np.percentile(hist_vals, 90))
+            anomalies = [f for f in forecasted if f['Forecast'] > anomaly_threshold]
+    return jsonify({
+        'historical': historical,
+        'forecast': forecasted,
+        'anomalies': anomalies,
+        'anomaly_threshold': anomaly_threshold,
+        'pollutant_series': pollutant_series
+    })
 
 def estimate_health_impact(aqi):
     # WHO/US EPA AQI breakpoints (simplified)
@@ -422,6 +483,39 @@ def comparative_analysis():
             'recent_aqi': recent_aqi,
             'recent_period': recent_period
         }
+    return jsonify(results)
+
+@app.route('/api/pollutant-composition-timelapse')
+def pollutant_composition_timelapse():
+    df = load_and_clean_data()
+    df['Date'] = pd.to_datetime(df['Date'])
+    df['Year'] = df['Date'].dt.year
+    df['Month'] = df['Date'].dt.month
+    results = {}
+    for city, group in df.groupby('City'):
+        city_result = {}
+        total_aqi = group['AQI'].sum()
+        # Monthly composition
+        monthly = group.groupby(['Year', 'Month'])
+        month_data = {}
+        for (year, month), mgroup in monthly:
+            month_key = f"{year}-{month:02d}"
+            pols = {}
+            for pol in POLLUTANTS:
+                avg = mgroup[pol].mean()
+                maxv = mgroup[pol].max()
+                pol_sum = mgroup[pol].sum()
+                pct_contrib = (pol_sum / mgroup['AQI'].sum() * 100) if mgroup['AQI'].sum() else 0
+                pols[pol] = {
+                    'average': avg,
+                    'max': maxv,
+                    'percentage_contribution': pct_contrib,
+                    'health_risks': POLLUTANT_HEALTH_RISKS.get(pol, []),
+                    'sources': POLLUTANT_SOURCES.get(pol, [])
+                }
+            month_data[month_key] = pols
+        city_result['monthly'] = month_data
+        results[city] = city_result
     return jsonify(results)
 
 if __name__ == '__main__':
