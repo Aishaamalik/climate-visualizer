@@ -111,6 +111,23 @@ def forecast():
     result['Date'] = result['Date'].dt.strftime('%Y-%m-%d')
     return jsonify(result.to_dict(orient='records'))
 
+def estimate_health_impact(aqi):
+    # WHO/US EPA AQI breakpoints (simplified)
+    if aqi is None:
+        return {'aqi': None, 'category': 'Unknown', 'description': 'No data available.'}
+    if aqi <= 50:
+        return {'aqi': aqi, 'category': 'Good', 'description': 'Air quality is considered satisfactory, and air pollution poses little or no risk.'}
+    elif aqi <= 100:
+        return {'aqi': aqi, 'category': 'Moderate', 'description': 'Air quality is acceptable; some pollutants may be a moderate health concern for a very small number of people.'}
+    elif aqi <= 150:
+        return {'aqi': aqi, 'category': 'Unhealthy for Sensitive Groups', 'description': 'Members of sensitive groups may experience health effects. The general public is not likely to be affected.'}
+    elif aqi <= 200:
+        return {'aqi': aqi, 'category': 'Unhealthy', 'description': 'Everyone may begin to experience health effects; members of sensitive groups may experience more serious health effects.'}
+    elif aqi <= 300:
+        return {'aqi': aqi, 'category': 'Very Unhealthy', 'description': 'Health alert: everyone may experience more serious health effects.'}
+    else:
+        return {'aqi': aqi, 'category': 'Hazardous', 'description': 'Health warnings of emergency conditions. The entire population is more likely to be affected.'}
+
 @app.route('/api/city-aqi-trends')
 def city_aqi_trends():
     df = load_and_clean_data()
@@ -136,11 +153,32 @@ def city_aqi_trends():
                 trend = 'stable'
         else:
             trend = 'stable'
+        # Health impact for latest AQI
+        if not monthly.empty:
+            latest = monthly.iloc[-1]
+            latest_aqi = latest['AQI']
+        else:
+            latest_aqi = None
+        health_impact = estimate_health_impact(latest_aqi)
+        # Seasonal highlights: average AQI for each month across years
+        month_means = monthly.groupby('Month')['AQI'].mean()
+        if len(month_means) >= 2:
+            top_months = month_means.sort_values(ascending=False).head(2)
+            bottom_months = month_means.sort_values().head(2)
+            seasonal_highlights = []
+            for m, v in top_months.items():
+                seasonal_highlights.append({'month': int(m), 'avg_aqi': float(v), 'type': 'spike'})
+            for m, v in bottom_months.items():
+                seasonal_highlights.append({'month': int(m), 'avg_aqi': float(v), 'type': 'drop'})
+        else:
+            seasonal_highlights = []
         results[city] = {
             'monthly_avg_aqi': monthly.to_dict(orient='records'),
             'yearly_avg_aqi': yearly.to_dict(orient='records'),
             'spikes': spikes,
-            'trend': trend
+            'trend': trend,
+            'health_impact': health_impact,
+            'seasonal_highlights': seasonal_highlights
         }
     return jsonify(results)
 
