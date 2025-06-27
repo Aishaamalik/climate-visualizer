@@ -191,6 +191,40 @@ function GlobalSearchModal({ open, onClose, cities, countries, pollutants, setSe
   );
 }
 
+function HeaderActions({ darkMode, setDarkMode, setSearchOpen, notifOpen, setNotifOpen }) {
+  const { unreadCount } = useNotifications();
+  return (
+    <>
+      <button
+        className="bg-gray-100 dark:bg-gray-800 p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+        onClick={() => setDarkMode((d) => !d)}
+        title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+      >
+        {darkMode ? <Sun size={20} className="text-yellow-400" /> : <Moon size={20} className="text-gray-500" />}
+      </button>
+      <button
+        className="bg-gray-100 dark:bg-gray-800 p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+        onClick={() => setSearchOpen(true)}
+        title="Global Search"
+      >
+        <Search size={20} className="text-gray-500" />
+      </button>
+      <button
+        className="relative bg-gray-100 dark:bg-gray-800 p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+        onClick={() => setNotifOpen((o) => !o)}
+        title="Notifications"
+      >
+        <Bell size={20} className="text-gray-500" />
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 font-bold">
+            {unreadCount}
+          </span>
+        )}
+      </button>
+    </>
+  );
+}
+
 function App() {
   const [darkMode, setDarkMode] = useState(() => {
     // Check localStorage or system preference
@@ -288,20 +322,18 @@ function App() {
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">Welcome Back</h2>
               </div>
               <div className="flex items-center gap-4">
-                <button
-                  className="bg-gray-100 dark:bg-gray-800 p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
-                  onClick={() => setDarkMode((d) => !d)}
-                  title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-                >
-                  {darkMode ? <Sun size={20} className="text-yellow-400" /> : <Moon size={20} className="text-gray-500" />}
-                </button>
-                <button
-                  className="bg-gray-100 dark:bg-gray-800 p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
-                  onClick={() => setSearchOpen(true)}
-                  title="Global Search"
-                >
-                  <Search size={20} className="text-gray-500" />
-                </button>
+                <HeaderActions
+                  darkMode={darkMode}
+                  setDarkMode={setDarkMode}
+                  setSearchOpen={setSearchOpen}
+                  notifOpen={notifOpen}
+                  setNotifOpen={setNotifOpen}
+                />
+                {notifOpen && (
+                  <div className="absolute right-0 top-12 z-50">
+                    <NotificationDropdown open={notifOpen} onClose={() => setNotifOpen(false)} />
+                  </div>
+                )}
               </div>
             </header>
             <GlobalSearchModal

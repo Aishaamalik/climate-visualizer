@@ -33,10 +33,20 @@ export default function CityTrendsScreen() {
         setCities(Object.keys(data));
         setSelectedCity(Object.keys(data)[0] || '');
         setLoading(false);
+        addNotification({
+          title: 'City Trends',
+          message: 'City AQI trends loaded successfully.',
+          time: new Date().toLocaleString()
+        });
       })
       .catch(() => {
         setError('Failed to fetch city AQI trends.');
         setLoading(false);
+        addNotification({
+          title: 'City Trends',
+          message: 'Failed to load city AQI trends.',
+          time: new Date().toLocaleString()
+        });
       });
   }, []);
 

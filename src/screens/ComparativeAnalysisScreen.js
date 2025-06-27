@@ -15,6 +15,7 @@ import {
   Legend,
 } from 'chart.js';
 import MapSection from '../components/MapSection';
+import { useNotifications } from '../App';
 
 ChartJS.register(
   CategoryScale,
@@ -41,6 +42,7 @@ const ComparativeAnalysisScreen = () => {
   const [error, setError] = useState('');
   const [benchmark, setBenchmark] = useState(null);
   const [k, setK] = useState(3);
+  const { addNotification } = useNotifications();
 
   useEffect(() => {
     axios.get(`/api/${mode === 'city' ? 'cities' : 'countries'}`).then(res => {
@@ -66,8 +68,18 @@ const ComparativeAnalysisScreen = () => {
         k: k
       });
       setResults(res.data);
+      addNotification({
+        title: 'Comparative Analysis',
+        message: 'Comparative analysis data loaded successfully.',
+        time: new Date().toLocaleString()
+      });
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to fetch comparative analysis');
+      addNotification({
+        title: 'Comparative Analysis',
+        message: 'Failed to load comparative analysis data.',
+        time: new Date().toLocaleString()
+      });
     }
     setLoading(false);
   };

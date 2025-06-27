@@ -15,6 +15,7 @@ import {
 } from 'chart.js';
 import 'chartjs-adapter-date-fns';
 import { InformationCircleIcon, ExclamationTriangleIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
+import { useNotifications } from '../App';
 
 ChartJS.register(
   CategoryScale,
@@ -77,6 +78,7 @@ const ForecastingScreen = () => {
   const [showScenario, setShowScenario] = useState(false);
   const [pollutantSeries, setPollutantSeries] = useState(null);
   const [showTable, setShowTable] = useState(false);
+  const { addNotification } = useNotifications();
 
   useEffect(() => {
     axios.get('/api/cities').then(res => setCities(res.data));
@@ -117,8 +119,18 @@ const ForecastingScreen = () => {
       setAnomalyThreshold(data.anomaly_threshold || null);
       setPollutantSeries(data.pollutant_series || null);
       setForecast([...(data.historical || []), ...(data.forecast || [])]);
+      addNotification({
+        title: 'Forecasting',
+        message: 'Forecast data loaded successfully.',
+        time: new Date().toLocaleString()
+      });
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to fetch forecast');
+      addNotification({
+        title: 'Forecasting',
+        message: 'Failed to load forecast data.',
+        time: new Date().toLocaleString()
+      });
     }
     setLoading(false);
   };
