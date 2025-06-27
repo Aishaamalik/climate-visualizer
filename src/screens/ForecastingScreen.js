@@ -14,6 +14,7 @@ import {
   TimeScale
 } from 'chart.js';
 import 'chartjs-adapter-date-fns';
+import { InformationCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 
 ChartJS.register(
   CategoryScale,
@@ -65,8 +66,16 @@ const ForecastingScreen = () => {
   const [selectedCity, setSelectedCity] = useState('');
   const [selectedPollutant, setSelectedPollutant] = useState('AQI');
   const [forecast, setForecast] = useState([]);
+  const [historical, setHistorical] = useState([]);
+  const [forecasted, setForecasted] = useState([]);
+  const [anomalies, setAnomalies] = useState([]);
+  const [anomalyThreshold, setAnomalyThreshold] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [scenarioPollutant, setScenarioPollutant] = useState('NO2 (ppb)');
+  const [scenarioReduction, setScenarioReduction] = useState(0);
+  const [showScenario, setShowScenario] = useState(false);
+  const [pollutantSeries, setPollutantSeries] = useState(null);
 
   useEffect(() => {
     axios.get('/api/cities').then(res => setCities(res.data));
@@ -77,70 +86,99 @@ const ForecastingScreen = () => {
     setLoading(true);
     setError('');
     setForecast([]);
+    setHistorical([]);
+    setForecasted([]);
+    setAnomalies([]);
+    setAnomalyThreshold(null);
+    setPollutantSeries(null);
     try {
-      const res = await axios.get('/api/forecast', {
-        params: {
+      let res;
+      if (showScenario && scenarioReduction > 0) {
+        res = await axios.post('/api/forecast', {
           city: selectedCity,
           pollutant: selectedPollutant,
-          periods: 30
-        }
-      });
-      console.log('Forecast API response:', res.data);
-      // Ensure Date is in ISO format for chartjs-adapter-date-fns
-      const formatted = res.data.map(f => ({
-        ...f,
-        Date: f.Date ? new Date(f.Date).toISOString().slice(0, 10) : '',
-        type: f.type || 'forecast',
-      }));
-      setForecast(formatted);
+          periods: 30,
+          emission_reduction: { [scenarioPollutant]: scenarioReduction / 100 }
+        });
+      } else {
+        res = await axios.get('/api/forecast', {
+          params: {
+            city: selectedCity,
+            pollutant: selectedPollutant,
+            periods: 30
+          }
+        });
+      }
+      const data = res.data;
+      setHistorical(data.historical || []);
+      setForecasted(data.forecast || []);
+      setAnomalies(data.anomalies || []);
+      setAnomalyThreshold(data.anomaly_threshold || null);
+      setPollutantSeries(data.pollutant_series || null);
+      setForecast([...(data.historical || []), ...(data.forecast || [])]);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to fetch forecast');
     }
     setLoading(false);
   };
 
-  // Only show the forecasted period (next 30 days)
-  const predicted = forecast.filter(f => f.type === 'forecast');
-  const allDates = predicted.map(f => f.Date);
+  // Chart data: overlay historical (solid), forecast (dashed), anomalies (red)
+  // Ensure unique, sorted labels and aligned data
+  const histDates = historical.map(f => f.Date).filter(Boolean);
+  const forecastDates = forecasted.map(f => f.Date).filter(Boolean);
+  // Remove duplicates and sort
+  const allDates = Array.from(new Set([...histDates, ...forecastDates])).sort();
+  // Map date to value for each dataset
+  const histMap = Object.fromEntries(historical.map(f => [f.Date, f.Forecast]));
+  const forecastMap = Object.fromEntries(forecasted.map(f => [f.Date, f.Forecast]));
+  const anomalyDates = anomalies.map(a => a.Date);
+  // Build aligned data arrays
+  const histData = allDates.map(date => histMap[date] ?? null);
+  const forecastData = allDates.map(date => forecastMap[date] ?? null);
+  const anomalyPoints = allDates.map(date => anomalyDates.includes(date));
+  // Debug logs
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('Chart allDates:', allDates);
+    console.log('Chart histData:', histData);
+    console.log('Chart forecastData:', forecastData);
+    console.log('Chart anomalyPoints:', anomalyPoints);
+  }
   const chartData = {
     labels: allDates,
     datasets: [
       {
-        label: 'Forecast',
-        data: predicted.map(f => f.Forecast),
-        borderColor: 'rgba(16, 185, 129, 1)', // green-500
-        backgroundColor: 'rgba(16, 185, 129, 0.10)',
-        borderDash: [8, 6],
-        pointBackgroundColor: 'rgba(16, 185, 129, 1)',
+        label: 'Historical',
+        data: histData,
+        borderColor: 'rgba(59,130,246,1)',
+        backgroundColor: 'rgba(59,130,246,0.10)',
+        pointBackgroundColor: 'rgba(59,130,246,1)',
         pointBorderColor: '#fff',
         pointHoverBackgroundColor: '#fff',
-        pointHoverBorderColor: 'rgba(16, 185, 129, 1)',
+        pointHoverBorderColor: 'rgba(59,130,246,1)',
         tension: 0.35,
         pointRadius: 3,
         pointHoverRadius: 5,
         fill: false,
         borderWidth: 3,
         spanGaps: true,
+        borderDash: [],
       },
       {
-        label: 'Forecast Confidence',
-        data: predicted.map(f => f.Upper),
-        borderColor: 'rgba(59, 130, 246, 0.0)',
-        backgroundColor: 'rgba(59, 130, 246, 0.10)',
-        fill: '+1',
-        pointRadius: 0,
-        borderWidth: 0,
-        order: 1,
-      },
-      {
-        label: '',
-        data: predicted.map(f => f.Lower),
-        borderColor: 'rgba(59, 130, 246, 0.0)',
-        backgroundColor: 'rgba(59, 130, 246, 0.10)',
-        fill: '-1',
-        pointRadius: 0,
-        borderWidth: 0,
-        order: 1,
+        label: 'Forecast',
+        data: forecastData,
+        borderColor: 'rgba(16,185,129,1)',
+        backgroundColor: 'rgba(16,185,129,0.10)',
+        pointBackgroundColor: anomalyPoints.map(isAnomaly => isAnomaly ? 'rgba(239,68,68,1)' : 'rgba(16,185,129,1)'),
+        pointBorderColor: '#fff',
+        pointHoverBackgroundColor: '#fff',
+        pointHoverBorderColor: 'rgba(16,185,129,1)',
+        tension: 0.35,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        fill: false,
+        borderWidth: 3,
+        spanGaps: true,
+        borderDash: [8, 6],
       },
     ],
   };
@@ -153,7 +191,7 @@ const ForecastingScreen = () => {
         display: true,
         position: 'top',
         labels: {
-          color: isDark ? '#e0e7ef' : '#1e293b',
+          color: isDark ? '#fff' : '#1e293b',
           font: { size: 14, weight: 'bold' },
           usePointStyle: true,
           padding: 20,
@@ -170,154 +208,131 @@ const ForecastingScreen = () => {
         cornerRadius: 8,
         callbacks: {
           label: function(context) {
-            if (context.dataset.label === 'Forecast Confidence') return null;
             return `${context.dataset.label}: ${context.parsed.y !== null ? context.parsed.y.toFixed(2) : ''}`;
           },
         },
       },
-      annotation: {
-        annotations: predicted.length ? {
-          line1: {
-            type: 'line',
-            xMin: allDates[0],
-            xMax: allDates[allDates.length - 1],
-            borderColor: isDark ? 'rgba(148,163,184,0.5)' : 'rgba(30,41,59,0.5)',
-            borderWidth: 2,
-            label: {
-              content: 'Forecast End',
-              enabled: true,
-              position: 'end',
-              color: isDark ? '#e0e7ef' : '#334155',
-              font: { weight: 'bold' },
-              backgroundColor: isDark ? '#1e293b' : '#fff',
-            },
-          },
-        } : {},
-      },
-      title: {
-        display: false,
-      },
-    },
-    layout: {
-      padding: 16,
+      title: { display: false },
     },
     scales: {
       x: {
-        type: 'time',
-        time: {
-          unit: 'day',
-          tooltipFormat: 'PP',
-          displayFormats: {
-            day: 'MMM d',
-          },
-        },
-        title: {
-          display: true,
-          text: 'Date',
-          color: isDark ? '#cbd5e1' : '#64748b',
-          font: { size: 13, weight: 'bold' },
-        },
-        grid: {
-          color: isDark ? 'rgba(51,65,85,0.3)' : 'rgba(203,213,225,0.3)',
-        },
-        ticks: {
-          color: isDark ? '#cbd5e1' : '#64748b',
-          font: { size: 12 },
-        },
+        type: 'category',
+        title: { display: true, text: 'Date', color: isDark ? '#fff' : '#1e293b' },
+        ticks: { color: isDark ? '#fff' : '#1e293b' },
+        grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' },
       },
       y: {
-        title: {
-          display: true,
-          text: selectedPollutant,
-          color: isDark ? '#cbd5e1' : '#64748b',
-          font: { size: 13, weight: 'bold' },
-        },
-        grid: {
-          color: isDark ? 'rgba(51,65,85,0.3)' : 'rgba(203,213,225,0.3)',
-        },
-        ticks: {
-          color: isDark ? '#cbd5e1' : '#64748b',
-          font: { size: 12 },
-          callback: function(value) {
-            return value.toFixed(0);
-          },
-        },
-      },
-    },
-    elements: {
-      line: {
-        borderJoinStyle: 'round',
-      },
-      point: {
-        borderWidth: 2,
+        title: { display: true, text: 'AQI', color: isDark ? '#fff' : '#1e293b' },
+        ticks: { color: isDark ? '#fff' : '#1e293b' },
+        grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' },
       },
     },
   };
 
+  // UI/UX: sticky selection panel
   return (
-    <div className="flex justify-center items-center min-h-[80vh] bg-gradient-to-br from-blue-50 to-blue-100 dark:from-gray-900 dark:to-gray-800 py-8">
-      <div className="w-full max-w-2xl bg-white dark:bg-gray-900 rounded-3xl shadow-2xl p-8">
-        <h2 className="text-3xl font-bold mb-2 text-blue-900 dark:text-blue-200">Forecasting Module</h2>
-        <p className="text-gray-600 dark:text-gray-300 mb-6">Predict future AQI or pollutant levels for a selected city using advanced time series models.</p>
-        <form className="flex flex-col md:flex-row gap-4 mb-6" onSubmit={e => { e.preventDefault(); fetchForecast(); }}>
-          <div className="flex-1">
-            <label htmlFor="city-select" className="block text-sm font-semibold mb-1">City</label>
-            <select
-              id="city-select"
-              aria-label="Select City"
-              className="border p-2 rounded w-full focus:ring-2 focus:ring-blue-400"
-              value={selectedCity}
-              onChange={e => setSelectedCity(e.target.value)}
-              required
-            >
-              <option value="">Select City</option>
-              {cities.map(city => (
-                <option key={city} value={city}>{city}</option>
-              ))}
+    <div className="max-w-5xl mx-auto p-2 md:p-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-2">
+        <div>
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">Forecasting & Scenario Analysis</h2>
+          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-200 text-sm">
+            <InformationCircleIcon className="w-5 h-5" />
+            Predict future AQI or pollutant levels for a selected city. Use scenario analysis to simulate emission reductions.
+          </div>
+        </div>
+      </div>
+      {/* Selection Panel */}
+      <div className="sticky top-2 z-10 mb-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 flex flex-col md:flex-row md:items-end gap-4">
+        <div className="flex-1 min-w-[160px]">
+          <label className="block mb-1 font-semibold text-gray-900 dark:text-white">City</label>
+          <select className="w-full rounded-lg border-gray-300 dark:bg-gray-900 dark:text-white" value={selectedCity} onChange={e => setSelectedCity(e.target.value)}>
+            <option value="">Select a city</option>
+            {cities.map(city => <option key={city} value={city}>{city}</option>)}
+          </select>
+        </div>
+        <div className="flex-1 min-w-[160px]">
+          <label className="block mb-1 font-semibold text-gray-900 dark:text-white">Pollutant</label>
+          <select className="w-full rounded-lg border-gray-300 dark:bg-gray-900 dark:text-white" value={selectedPollutant} onChange={e => setSelectedPollutant(e.target.value)}>
+            {pollutants.map(pol => <option key={pol} value={pol}>{pol}</option>)}
+          </select>
+        </div>
+        <div className="flex-1 flex items-end gap-2 min-w-[120px]">
+          <button className={`px-4 py-2 rounded-lg font-semibold shadow transition-colors ${showScenario ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 dark:text-white'}`} onClick={() => setShowScenario(v => !v)}>
+            {showScenario ? 'Scenario: ON' : 'Scenario: OFF'}
+          </button>
+        </div>
+        <div className="flex-1 flex items-end">
+          <button
+            className="w-full md:w-auto px-6 py-2 rounded-lg bg-green-600 text-white font-bold shadow hover:bg-green-700 transition-colors"
+            onClick={fetchForecast}
+            disabled={!selectedCity || !selectedPollutant || loading}
+          >
+            {loading ? <Spinner /> : 'Run Forecast'}
+          </button>
+        </div>
+      </div>
+      {/* Scenario Controls */}
+      {showScenario && (
+        <div className="mb-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 flex flex-col md:flex-row gap-4 items-end">
+          <div className="flex-1 min-w-[160px]">
+            <label className="block mb-1 font-semibold text-gray-900 dark:text-white">Pollutant to Reduce</label>
+            <select className="w-full rounded-lg border-gray-300 dark:bg-gray-900 dark:text-white" value={scenarioPollutant} onChange={e => setScenarioPollutant(e.target.value)}>
+              {pollutants.filter(p => p !== 'AQI').map(pol => <option key={pol} value={pol}>{pol}</option>)}
             </select>
           </div>
-          <div className="flex-1">
-            <label htmlFor="pollutant-select" className="block text-sm font-semibold mb-1">Pollutant</label>
-            <select
-              id="pollutant-select"
-              aria-label="Select Pollutant"
-              className="border p-2 rounded w-full focus:ring-2 focus:ring-blue-400"
-              value={selectedPollutant}
-              onChange={e => setSelectedPollutant(e.target.value)}
-            >
-              {pollutants.map(pol => (
-                <option key={pol} value={pol}>{pol}</option>
-              ))}
-            </select>
+          <div className="flex-1 min-w-[160px]">
+            <label className="block mb-1 font-semibold text-gray-900 dark:text-white">Reduction (%)</label>
+            <input type="range" min={0} max={100} step={1} className="w-full" value={scenarioReduction} onChange={e => setScenarioReduction(Number(e.target.value))} />
+            <div className="text-xs text-gray-600 dark:text-gray-200 mt-1">{scenarioReduction}% reduction</div>
           </div>
-          <div className="flex items-end">
-            <button
-              type="submit"
-              className="bg-blue-600 hover:bg-blue-700 transition text-white px-6 py-2 rounded shadow font-semibold focus:outline-none focus:ring-2 focus:ring-blue-400"
-              disabled={!selectedCity || loading}
-              aria-label="Get Forecast"
-            >
-              {loading ? <span className="flex items-center"><Spinner /> Forecasting...</span> : 'Get Forecast'}
-            </button>
-          </div>
-        </form>
-        {error && <div className="bg-red-100 text-red-700 rounded p-3 mb-4 text-center font-semibold shadow">{error}</div>}
-        {loading && <Spinner />}
-        {!loading && !error && forecast.length === 0 && (
-          <div className="text-gray-400 text-center py-8">
-            <svg className="mx-auto mb-2" width="48" height="48" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2" /></svg>
-            <div>No forecast data yet. Select a city and pollutant, then click <span className="font-semibold">Get Forecast</span>.</div>
-          </div>
-        )}
-        {forecast.length > 0 && !loading && (
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow mt-4">
-            <h3 className="text-lg font-bold mb-2 text-blue-800 dark:text-blue-200">30-Day Forecast</h3>
-            <div className="h-96">
-              <Line data={chartData} options={chartOptions} />
-            </div>
-          </div>
+        </div>
+      )}
+      {/* Error State */}
+      {error && <div className="p-4 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 rounded-xl mb-6 text-center font-semibold">{error}</div>}
+      {/* Anomaly Alert */}
+      {anomalies.length > 0 && (
+        <div className="flex items-center gap-2 p-4 mb-6 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded-xl">
+          <ExclamationTriangleIcon className="w-6 h-6" />
+          <span>Warning: {anomalies.length} forecasted day(s) exceed the anomaly threshold (AQI &gt; {anomalyThreshold && anomalyThreshold.toFixed(1)}).</span>
+        </div>
+      )}
+      {/* Chart Section */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8" style={{ minHeight: 400 }}>
+        {loading ? <Spinner /> : (
+          allDates.length > 0 && (histData.some(v => v !== null) || forecastData.some(v => v !== null)) ?
+            <Line data={chartData} options={chartOptions} height={400} /> :
+            <div className="text-center text-gray-400 dark:text-gray-300 py-16 text-lg">No data available for the selected city and pollutant.</div>
         )}
       </div>
+      {/* Scenario Table */}
+      {showScenario && pollutantSeries && (
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8">
+          <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white flex items-center gap-2">Modified Pollutant Series <InformationCircleIcon className="w-5 h-5 text-gray-400" title="Pollutant values after scenario reduction" /></h3>
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm text-left rounded-xl overflow-hidden">
+              <thead>
+                <tr className="bg-gray-100 dark:bg-gray-700">
+                  <th className="px-2 py-1 text-gray-900 dark:text-white">Date</th>
+                  {Object.keys(pollutantSeries[0] || {}).filter(k => k !== 'ds').map(pol => (
+                    <th key={pol} className="px-2 py-1 text-gray-900 dark:text-white">{pol}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {pollutantSeries.map((row, i) => (
+                  <tr key={i} className="even:bg-gray-50 dark:even:bg-gray-900">
+                    <td className="px-2 py-1 text-gray-800 dark:text-white">{row.ds?.slice(0, 10)}</td>
+                    {Object.keys(row).filter(k => k !== 'ds').map(pol => (
+                      <td key={pol} className="px-2 py-1 text-gray-800 dark:text-white">{row[pol]?.toFixed(2)}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

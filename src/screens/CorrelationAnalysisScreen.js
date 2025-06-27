@@ -111,11 +111,13 @@ export default function CorrelationAnalysisScreen() {
       <div className="mb-8 bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">Correlation Heatmap <InformationCircleIcon className="w-5 h-5 text-gray-400" title="Correlation matrix of all numeric variables (Pearson)" /></h3>
         <div className="overflow-x-auto">
-          <Bar data={barData} options={{
-            indexAxis: 'y',
-            plugins: { legend: { display: false } },
-            scales: { x: { min: -1, max: 1 } }
-          }} />
+          <div className="w-full max-w-[700px] h-[400px] mx-auto">
+            <Bar data={barData} options={{
+              indexAxis: 'y',
+              plugins: { legend: { display: false } },
+              scales: { x: { min: -1, max: 1 } }
+            }} />
+          </div>
         </div>
         <div className="text-xs text-gray-500 dark:text-gray-200 mt-2">Note: Values range from -1 (strong negative) to 1 (strong positive correlation).</div>
       </div>
@@ -126,75 +128,77 @@ export default function CorrelationAnalysisScreen() {
           {/* AQI vs Temperature */}
           <div>
             <div className="font-semibold mb-2 text-gray-900 dark:text-white">AQI vs Temperature</div>
-            <Scatter
-              data={{
-                datasets: [
-                  {
-                    label: 'Data',
-                    data: sampleAndJitter(correlations.AQI_Temperature.scatter.x, correlations.AQI_Temperature.scatter.y),
-                    backgroundColor: 'rgba(25, 118, 210, 0.3)',
-                    pointRadius: 2,
-                    pointHoverRadius: 4,
-                  },
-                  correlations.AQI_Temperature.scatter.slope !== null && {
-                    label: 'Regression',
-                    type: 'line',
-                    data: [
-                      { x: Math.min(...correlations.AQI_Temperature.scatter.x), y: correlations.AQI_Temperature.scatter.slope * Math.min(...correlations.AQI_Temperature.scatter.x) + correlations.AQI_Temperature.scatter.intercept },
-                      { x: Math.max(...correlations.AQI_Temperature.scatter.x), y: correlations.AQI_Temperature.scatter.slope * Math.max(...correlations.AQI_Temperature.scatter.x) + correlations.AQI_Temperature.scatter.intercept },
-                    ],
-                    borderColor: 'rgba(255, 99, 132, 0.8)',
-                    borderWidth: 2,
-                    fill: false,
-                    pointRadius: 0,
-                  },
-                ].filter(Boolean),
-              }}
-              options={{
-                plugins: { legend: { display: false }, tooltip: { mode: 'nearest', intersect: false } },
-                scales: { x: { title: { display: true, text: 'Temperature (°C)' }, grid: { color: 'rgba(200,200,200,0.2)' } }, y: { title: { display: true, text: 'AQI' }, grid: { color: 'rgba(200,200,200,0.2)' } } },
-                elements: { point: { radius: 2, backgroundColor: 'rgba(25, 118, 210, 0.3)' } },
-                maintainAspectRatio: false,
-              }}
-              height={220}
-            />
+            <div className="w-full max-w-[500px] h-[260px]">
+              <Scatter
+                data={{
+                  datasets: [
+                    {
+                      label: 'Data',
+                      data: sampleAndJitter(correlations.AQI_Temperature.scatter.x, correlations.AQI_Temperature.scatter.y),
+                      backgroundColor: 'rgba(25, 118, 210, 0.3)',
+                      pointRadius: 2,
+                      pointHoverRadius: 4,
+                    },
+                    correlations.AQI_Temperature.scatter.slope !== null && {
+                      label: 'Regression',
+                      type: 'line',
+                      data: [
+                        { x: Math.min(...correlations.AQI_Temperature.scatter.x), y: correlations.AQI_Temperature.scatter.slope * Math.min(...correlations.AQI_Temperature.scatter.x) + correlations.AQI_Temperature.scatter.intercept },
+                        { x: Math.max(...correlations.AQI_Temperature.scatter.x), y: correlations.AQI_Temperature.scatter.slope * Math.max(...correlations.AQI_Temperature.scatter.x) + correlations.AQI_Temperature.scatter.intercept },
+                      ],
+                      borderColor: 'rgba(255, 99, 132, 0.8)',
+                      borderWidth: 2,
+                      fill: false,
+                      pointRadius: 0,
+                    },
+                  ].filter(Boolean),
+                }}
+                options={{
+                  plugins: { legend: { display: false }, tooltip: { mode: 'nearest', intersect: false } },
+                  scales: { x: { title: { display: true, text: 'Temperature (°C)' }, grid: { color: 'rgba(200,200,200,0.2)' } }, y: { title: { display: true, text: 'AQI' }, grid: { color: 'rgba(200,200,200,0.2)' } } },
+                  elements: { point: { radius: 2, backgroundColor: 'rgba(25, 118, 210, 0.3)' } },
+                  maintainAspectRatio: false,
+                }}
+              />
+            </div>
             <div className="text-xs text-gray-500 dark:text-gray-200 mt-1">R²: {correlations.AQI_Temperature.scatter.r2?.toFixed(3) ?? 'N/A'}</div>
           </div>
           {/* PM2.5 vs Humidity */}
           <div>
             <div className="font-semibold mb-2 text-gray-900 dark:text-white">PM2.5 vs Humidity</div>
-            <Scatter
-              data={{
-                datasets: [
-                  {
-                    label: 'Data',
-                    data: sampleAndJitter(correlations['PM2.5_Humidity'].scatter.x, correlations['PM2.5_Humidity'].scatter.y),
-                    backgroundColor: 'rgba(67, 160, 71, 0.3)',
-                    pointRadius: 2,
-                    pointHoverRadius: 4,
-                  },
-                  correlations['PM2.5_Humidity'].scatter.slope !== null && {
-                    label: 'Regression',
-                    type: 'line',
-                    data: [
-                      { x: Math.min(...correlations['PM2.5_Humidity'].scatter.x), y: correlations['PM2.5_Humidity'].scatter.slope * Math.min(...correlations['PM2.5_Humidity'].scatter.x) + correlations['PM2.5_Humidity'].scatter.intercept },
-                      { x: Math.max(...correlations['PM2.5_Humidity'].scatter.x), y: correlations['PM2.5_Humidity'].scatter.slope * Math.max(...correlations['PM2.5_Humidity'].scatter.x) + correlations['PM2.5_Humidity'].scatter.intercept },
-                    ],
-                    borderColor: 'rgba(255, 193, 7, 0.8)',
-                    borderWidth: 2,
-                    fill: false,
-                    pointRadius: 0,
-                  },
-                ].filter(Boolean),
-              }}
-              options={{
-                plugins: { legend: { display: false }, tooltip: { mode: 'nearest', intersect: false } },
-                scales: { x: { title: { display: true, text: 'Humidity (%)' }, grid: { color: 'rgba(200,200,200,0.2)' } }, y: { title: { display: true, text: 'PM2.5 (µg/m³)' }, grid: { color: 'rgba(200,200,200,0.2)' } } },
-                elements: { point: { radius: 2, backgroundColor: 'rgba(67, 160, 71, 0.3)' } },
-                maintainAspectRatio: false,
-              }}
-              height={220}
-            />
+            <div className="w-full max-w-[500px] h-[260px]">
+              <Scatter
+                data={{
+                  datasets: [
+                    {
+                      label: 'Data',
+                      data: sampleAndJitter(correlations['PM2.5_Humidity'].scatter.x, correlations['PM2.5_Humidity'].scatter.y),
+                      backgroundColor: 'rgba(67, 160, 71, 0.3)',
+                      pointRadius: 2,
+                      pointHoverRadius: 4,
+                    },
+                    correlations['PM2.5_Humidity'].scatter.slope !== null && {
+                      label: 'Regression',
+                      type: 'line',
+                      data: [
+                        { x: Math.min(...correlations['PM2.5_Humidity'].scatter.x), y: correlations['PM2.5_Humidity'].scatter.slope * Math.min(...correlations['PM2.5_Humidity'].scatter.x) + correlations['PM2.5_Humidity'].scatter.intercept },
+                        { x: Math.max(...correlations['PM2.5_Humidity'].scatter.x), y: correlations['PM2.5_Humidity'].scatter.slope * Math.max(...correlations['PM2.5_Humidity'].scatter.x) + correlations['PM2.5_Humidity'].scatter.intercept },
+                      ],
+                      borderColor: 'rgba(255, 193, 7, 0.8)',
+                      borderWidth: 2,
+                      fill: false,
+                      pointRadius: 0,
+                    },
+                  ].filter(Boolean),
+                }}
+                options={{
+                  plugins: { legend: { display: false }, tooltip: { mode: 'nearest', intersect: false } },
+                  scales: { x: { title: { display: true, text: 'Humidity (%)' }, grid: { color: 'rgba(200,200,200,0.2)' } }, y: { title: { display: true, text: 'PM2.5 (µg/m³)' }, grid: { color: 'rgba(200,200,200,0.2)' } } },
+                  elements: { point: { radius: 2, backgroundColor: 'rgba(67, 160, 71, 0.3)' } },
+                  maintainAspectRatio: false,
+                }}
+              />
+            </div>
             <div className="text-xs text-gray-500 dark:text-gray-200 mt-1">R²: {correlations['PM2.5_Humidity'].scatter.r2?.toFixed(3) ?? 'N/A'}</div>
           </div>
         </div>
@@ -205,38 +209,39 @@ export default function CorrelationAnalysisScreen() {
             {Object.entries(correlations.WindSpeed_Pollutants).map(([pol, vals]) => (
               <div key={pol}>
                 <div className="text-sm font-semibold mb-1 text-gray-900 dark:text-white">{pol}</div>
-                <Scatter
-                  data={{
-                    datasets: [
-                      {
-                        label: 'Data',
-                        data: sampleAndJitter(vals.scatter.x, vals.scatter.y),
-                        backgroundColor: 'rgba(30, 136, 229, 0.3)',
-                        pointRadius: 2,
-                        pointHoverRadius: 4,
-                      },
-                      vals.scatter.slope !== null && {
-                        label: 'Regression',
-                        type: 'line',
-                        data: [
-                          { x: Math.min(...vals.scatter.x), y: vals.scatter.slope * Math.min(...vals.scatter.x) + vals.scatter.intercept },
-                          { x: Math.max(...vals.scatter.x), y: vals.scatter.slope * Math.max(...vals.scatter.x) + vals.scatter.intercept },
-                        ],
-                        borderColor: 'rgba(233, 30, 99, 0.8)',
-                        borderWidth: 2,
-                        fill: false,
-                        pointRadius: 0,
-                      },
-                    ].filter(Boolean),
-                  }}
-                  options={{
-                    plugins: { legend: { display: false }, tooltip: { mode: 'nearest', intersect: false } },
-                    scales: { x: { title: { display: true, text: 'Wind Speed (m/s)' }, grid: { color: 'rgba(200,200,200,0.2)' } }, y: { title: { display: true, text: pol }, grid: { color: 'rgba(200,200,200,0.2)' } } },
-                    elements: { point: { radius: 2, backgroundColor: 'rgba(30, 136, 229, 0.3)' } },
-                    maintainAspectRatio: false,
-                  }}
-                  height={180}
-                />
+                <div className="w-full max-w-[350px] h-[200px]">
+                  <Scatter
+                    data={{
+                      datasets: [
+                        {
+                          label: 'Data',
+                          data: sampleAndJitter(vals.scatter.x, vals.scatter.y),
+                          backgroundColor: 'rgba(30, 136, 229, 0.3)',
+                          pointRadius: 2,
+                          pointHoverRadius: 4,
+                        },
+                        vals.scatter.slope !== null && {
+                          label: 'Regression',
+                          type: 'line',
+                          data: [
+                            { x: Math.min(...vals.scatter.x), y: vals.scatter.slope * Math.min(...vals.scatter.x) + vals.scatter.intercept },
+                            { x: Math.max(...vals.scatter.x), y: vals.scatter.slope * Math.max(...vals.scatter.x) + vals.scatter.intercept },
+                          ],
+                          borderColor: 'rgba(233, 30, 99, 0.8)',
+                          borderWidth: 2,
+                          fill: false,
+                          pointRadius: 0,
+                        },
+                      ].filter(Boolean),
+                    }}
+                    options={{
+                      plugins: { legend: { display: false }, tooltip: { mode: 'nearest', intersect: false } },
+                      scales: { x: { title: { display: true, text: 'Wind Speed (m/s)' }, grid: { color: 'rgba(200,200,200,0.2)' } }, y: { title: { display: true, text: pol }, grid: { color: 'rgba(200,200,200,0.2)' } } },
+                      elements: { point: { radius: 2, backgroundColor: 'rgba(30, 136, 229, 0.3)' } },
+                      maintainAspectRatio: false,
+                    }}
+                  />
+                </div>
                 <div className="text-xs text-gray-500 dark:text-gray-200 mt-1">R²: {vals.scatter.r2?.toFixed(3) ?? 'N/A'}</div>
               </div>
             ))}
