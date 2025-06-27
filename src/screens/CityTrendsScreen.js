@@ -114,12 +114,12 @@ export default function CityTrendsScreen() {
 
   return (
     <div className="max-w-5xl mx-auto p-2 md:p-6">
-      <h2 className="text-2xl font-bold mb-8 text-center">City-Wise AQI Trends</h2>
+      <h2 className="text-2xl font-bold mb-8 text-center dark:text-white">City-Wise AQI Trends</h2>
       {/* City Selector Card */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8 flex flex-col md:flex-row items-center gap-6">
         <div className="flex items-center gap-3 w-full md:w-auto">
           <InformationCircleIcon className="w-6 h-6 text-blue-400" />
-          <label htmlFor="city-select" className="font-semibold text-gray-700 dark:text-gray-200">Select City:</label>
+          <label htmlFor="city-select" className="font-semibold text-gray-700 dark:text-white">Select City:</label>
           <select
             id="city-select"
             className="p-3 rounded-lg border dark:bg-gray-900 dark:border-gray-700 min-w-[200px]"
@@ -138,35 +138,35 @@ export default function CityTrendsScreen() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div className="flex flex-col items-start bg-blue-50 dark:bg-blue-900 rounded-2xl shadow-lg p-6 border-t-4 border-blue-500">
           <div className="bg-blue-100 dark:bg-blue-800 p-3 rounded-full mb-4"><ArrowTrendingUpIcon className="w-7 h-7 text-blue-600 dark:text-blue-300" /></div>
-          <div className="text-2xl font-bold mb-1">{currentAQI ? currentAQI.toFixed(1) : 'N/A'}</div>
-          <div className="text-sm text-gray-500">Current AQI</div>
+          <div className="text-2xl font-bold mb-1 dark:text-white">{currentAQI ? currentAQI.toFixed(1) : 'N/A'}</div>
+          <div className="text-sm text-gray-500 dark:text-white">Current AQI</div>
           <div className="text-xs text-blue-700 dark:text-blue-200 mt-2 font-semibold">Latest Month</div>
         </div>
         <div className="flex flex-col items-start bg-green-50 dark:bg-green-900 rounded-2xl shadow-lg p-6 border-t-4 border-green-500">
           <div className="bg-green-100 dark:bg-green-800 p-3 rounded-full mb-4"><ArrowTrendingDownIcon className="w-7 h-7 text-green-600 dark:text-green-300" /></div>
-          <div className="text-2xl font-bold mb-1">{bestMonth ? `${bestMonth.Year}-${String(bestMonth.Month).padStart(2, '0')}` : 'N/A'}</div>
-          <div className="text-sm text-gray-500">Best Month</div>
+          <div className="text-2xl font-bold mb-1 dark:text-white">{bestMonth ? `${bestMonth.Year}-${String(bestMonth.Month).padStart(2, '0')}` : 'N/A'}</div>
+          <div className="text-sm text-gray-500 dark:text-white">Best Month</div>
           <div className="text-xs text-green-700 dark:text-green-200 mt-2 font-semibold">AQI: {bestMonth ? bestMonth.AQI.toFixed(1) : 'N/A'}</div>
         </div>
         <div className="flex flex-col items-start bg-red-50 dark:bg-red-900 rounded-2xl shadow-lg p-6 border-t-4 border-red-500">
           <div className="bg-red-100 dark:bg-red-800 p-3 rounded-full mb-4"><ArrowTrendingUpIcon className="w-7 h-7 text-red-600 dark:text-red-300" /></div>
-          <div className="text-2xl font-bold mb-1">{worstMonth ? `${worstMonth.Year}-${String(worstMonth.Month).padStart(2, '0')}` : 'N/A'}</div>
-          <div className="text-sm text-gray-500">Worst Month</div>
+          <div className="text-2xl font-bold mb-1 dark:text-white">{worstMonth ? `${worstMonth.Year}-${String(worstMonth.Month).padStart(2, '0')}` : 'N/A'}</div>
+          <div className="text-sm text-gray-500 dark:text-white">Worst Month</div>
           <div className="text-xs text-red-700 dark:text-red-200 mt-2 font-semibold">AQI: {worstMonth ? worstMonth.AQI.toFixed(1) : 'N/A'}</div>
         </div>
         {/* Health Impact Card */}
         <div className="flex flex-col items-start bg-yellow-50 dark:bg-yellow-900 rounded-2xl shadow-lg p-6 border-t-4 border-yellow-500">
           <div className="bg-yellow-100 dark:bg-yellow-800 p-3 rounded-full mb-4"><InformationCircleIcon className="w-7 h-7 text-yellow-600 dark:text-yellow-300" /></div>
-          <div className="text-lg font-bold mb-1">{healthImpact?.category || 'N/A'}</div>
+          <div className="text-lg font-bold mb-1 dark:text-white">{healthImpact?.category || 'N/A'}</div>
           <div className="text-yellow-700 dark:text-yellow-200 font-semibold text-xl">{healthImpact?.aqi !== undefined && healthImpact?.aqi !== null ? healthImpact.aqi.toFixed(1) : 'N/A'}</div>
-          <div className="text-xs text-gray-500 mt-2">{healthImpact?.description}</div>
+          <div className="text-xs text-gray-500 dark:text-white mt-2">{healthImpact?.description}</div>
         </div>
       </div>
       {/* Chart Card */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold">AQI Trend Chart</h3>
-          <span className="text-gray-400 text-sm">Monthly and yearly AQI trends for the selected city.</span>
+          <h3 className="text-lg font-bold dark:text-white">AQI Trend Chart</h3>
+          <span className="text-gray-400 text-sm dark:text-white">Monthly and yearly AQI trends for the selected city.</span>
         </div>
         <Line data={chartData} options={options} />
       </div>
@@ -174,14 +174,14 @@ export default function CityTrendsScreen() {
       {seasonalHighlights.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8">
           <div className="flex items-center gap-2 mb-4">
-            <h3 className="font-semibold">Seasonal Trend Highlights</h3>
+            <h3 className="font-semibold dark:text-white">Seasonal Trend Highlights</h3>
             <InformationCircleIcon className="w-5 h-5 text-gray-400 cursor-pointer" title="Months with consistently high (spike) or low (drop) AQI across years." />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {seasonalHighlights.map((h, i) => (
               <div key={i} className={`p-4 rounded-xl shadow flex flex-col gap-1 ${h.type === 'spike' ? 'bg-red-50 dark:bg-red-900' : 'bg-green-50 dark:bg-green-900'}`}>
-                <div className="font-bold text-lg">{h.type === 'spike' ? 'Spike' : 'Drop'}: Month {h.month}</div>
-                <div className="text-gray-700 dark:text-gray-200">Avg AQI: <span className="font-semibold">{h.avg_aqi.toFixed(1)}</span></div>
+                <div className="font-bold text-lg dark:text-white">{h.type === 'spike' ? 'Spike' : 'Drop'}: Month {h.month}</div>
+                <div className="text-gray-700 dark:text-white">Avg AQI: <span className="font-semibold">{h.avg_aqi.toFixed(1)}</span></div>
               </div>
             ))}
           </div>
@@ -190,14 +190,14 @@ export default function CityTrendsScreen() {
       {/* Pollution Spikes Card */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8">
         <div className="flex items-center gap-2 mb-4">
-          <h3 className="font-semibold">Pollution Spikes</h3>
+          <h3 className="font-semibold dark:text-white">Pollution Spikes</h3>
           <InformationCircleIcon className="w-5 h-5 text-gray-400 cursor-pointer" title="These are months where AQI was unusually high (above 90th percentile)." />
         </div>
         {spikes.length === 0 ? (
-          <div className="text-gray-400">No spikes detected.</div>
+          <div className="text-gray-400 dark:text-white">No spikes detected.</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm text-left">
+            <table className="min-w-full text-sm text-left dark:text-white">
               <thead>
                 <tr>
                   <th className="px-2 py-1">Year</th>
@@ -210,7 +210,7 @@ export default function CityTrendsScreen() {
                   <tr key={i}>
                     <td className="px-2 py-1">{s.Year}</td>
                     <td className="px-2 py-1">{String(s.Month).padStart(2, '0')}</td>
-                    <td className={`px-2 py-1 font-semibold ${s.AQI > 150 ? 'text-red-600' : s.AQI > 100 ? 'text-yellow-600' : 'text-green-700'}`}>{s.AQI.toFixed(1)}</td>
+                    <td className={`px-2 py-1 font-semibold ${s.AQI > 150 ? 'text-red-600 dark:text-red-300' : s.AQI > 100 ? 'text-yellow-600 dark:text-yellow-200' : 'text-green-700 dark:text-green-200'}`}>{s.AQI.toFixed(1)}</td>
                   </tr>
                 ))}
               </tbody>

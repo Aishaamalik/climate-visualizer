@@ -278,15 +278,7 @@ function App() {
               {/* Nav */}
               <SidebarNav />
             </div>
-            {/* Bottom links */}
-            <div className="flex flex-col gap-2 mt-10">
-              <button className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-900/60 transition text-sm">
-                <HelpCircle size={18} /> Help Centre
-              </button>
-              <button className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-900/60 transition text-sm">
-                <MessageSquare size={18} /> Contact us
-              </button>
-            </div>
+            
           </aside>
           {/* Main Content */}
           <div className="flex-1 flex flex-col p-6 md:p-10">
@@ -326,43 +318,43 @@ function App() {
             <main className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl p-8 flex-1">
               <Routes>
                 <Route path="/" element={
-                  <main className="max-w-7xl mx-auto p-2 md:p-4">
+                  <main className="max-w-7xl mx-auto p-2 md:p-4 dark:text-white">
                     {/* Dashboard Summary Cards */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
                       {/* Average AQI */}
-                      <div className="flex flex-col items-start bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border-t-4 border-blue-500">
+                      <div className="flex flex-col items-start bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border-t-4 border-blue-500 dark:text-white">
                         <div className="bg-blue-100 dark:bg-blue-900 p-3 rounded-full mb-4"><TrendingUp size={28} className="text-blue-600 dark:text-blue-300" /></div>
-                        <div className="text-3xl font-bold mb-1">{data && data.length ? (data.reduce((a, b) => a + (b.AQI || 0), 0) / data.length).toFixed(1) : '--'}</div>
-                        <div className="text-sm text-gray-500">Avg AQI</div>
-                        <div className="text-xs text-gray-400 mt-2">Current Filter</div>
+                        <div className="text-3xl font-bold mb-1 dark:text-white">{data && data.length ? (data.reduce((a, b) => a + (b.AQI || 0), 0) / data.length).toFixed(1) : '--'}</div>
+                        <div className="text-sm text-gray-500 dark:text-white">Avg AQI</div>
+                        <div className="text-xs text-gray-400 dark:text-white mt-2">Current Filter</div>
                       </div>
                       {/* Number of Cities */}
-                      <div className="flex flex-col items-start bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border-t-4 border-green-500">
+                      <div className="flex flex-col items-start bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border-t-4 border-green-500 dark:text-white">
                         <div className="bg-green-100 dark:bg-green-900 p-3 rounded-full mb-4"><MapPin size={28} className="text-green-600 dark:text-green-300" /></div>
-                        <div className="text-3xl font-bold mb-1">{data && data.length ? Array.from(new Set(data.map(d => d.City))).length : '--'}</div>
-                        <div className="text-sm text-gray-500">Cities</div>
-                        <div className="text-xs text-gray-400 mt-2">In View</div>
+                        <div className="text-3xl font-bold mb-1 dark:text-white">{data && data.length ? Array.from(new Set(data.map(d => d.City))).length : '--'}</div>
+                        <div className="text-sm text-gray-500 dark:text-white">Cities</div>
+                        <div className="text-xs text-gray-400 dark:text-white mt-2">In View</div>
                       </div>
                       {/* Most Recent Date */}
-                      <div className="flex flex-col items-start bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border-t-4 border-purple-500">
+                      <div className="flex flex-col items-start bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border-t-4 border-purple-500 dark:text-white">
                         <div className="bg-purple-100 dark:bg-purple-900 p-3 rounded-full mb-4"><Filter size={28} className="text-purple-600 dark:text-purple-300" /></div>
-                        <div className="text-3xl font-bold mb-1">{data && data.length ? (data[data.length - 1]?.Date || '--') : '--'}</div>
-                        <div className="text-sm text-gray-500">Latest Date</div>
-                        <div className="text-xs text-gray-400 mt-2">Data</div>
+                        <div className="text-3xl font-bold mb-1 dark:text-white">{data && data.length ? (data[data.length - 1]?.Date || '--') : '--'}</div>
+                        <div className="text-sm text-gray-500 dark:text-white">Latest Date</div>
+                        <div className="text-xs text-gray-400 dark:text-white mt-2">Data</div>
                       </div>
                       {/* Dominant Pollutant */}
-                      <div className="flex flex-col items-start bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border-t-4 border-orange-500">
+                      <div className="flex flex-col items-start bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border-t-4 border-orange-500 dark:text-white">
                         <div className="bg-orange-100 dark:bg-orange-900 p-3 rounded-full mb-4"><Filter size={28} className="text-orange-600 dark:text-orange-300" /></div>
-                        <div className="text-3xl font-bold mb-1">{data && data.length && selectedPollutant ? selectedPollutant : (pollutants[0] || '--')}</div>
-                        <div className="text-sm text-gray-500">Dominant Pollutant</div>
-                        <div className="text-xs text-gray-400 mt-2">Current</div>
+                        <div className="text-3xl font-bold mb-1 dark:text-white">{data && data.length && selectedPollutant ? selectedPollutant : (pollutants[0] || '--')}</div>
+                        <div className="text-sm text-gray-500 dark:text-white">Dominant Pollutant</div>
+                        <div className="text-xs text-gray-400 dark:text-white mt-2">Current</div>
                       </div>
                     </div>
                     {/* Filters Bar */}
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-10 flex flex-col md:flex-row gap-6 items-center">
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-10 flex flex-col md:flex-row gap-6 items-center dark:text-white">
                       <div className="flex-1 grid grid-cols-1 md:grid-cols-5 gap-4 w-full">
                         <select
-                          className="p-3 rounded-lg border dark:bg-gray-900 dark:border-gray-700 w-full"
+                          className="p-3 rounded-lg border dark:bg-gray-900 dark:border-gray-700 w-full dark:text-white"
                           value={selectedCountry}
                           onChange={e => setSelectedCountry(e.target.value)}
                         >
@@ -370,7 +362,7 @@ function App() {
                           {countries.map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
                         <select
-                          className="p-3 rounded-lg border dark:bg-gray-900 dark:border-gray-700 w-full"
+                          className="p-3 rounded-lg border dark:bg-gray-900 dark:border-gray-700 w-full dark:text-white"
                           value={selectedCity}
                           onChange={e => setSelectedCity(e.target.value)}
                           disabled={!selectedCountry}
@@ -379,7 +371,7 @@ function App() {
                           {cities.map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
                         <select
-                          className="p-3 rounded-lg border dark:bg-gray-900 dark:border-gray-700 w-full"
+                          className="p-3 rounded-lg border dark:bg-gray-900 dark:border-gray-700 w-full dark:text-white"
                           value={selectedPollutant}
                           onChange={e => setSelectedPollutant(e.target.value)}
                         >
@@ -388,19 +380,19 @@ function App() {
                         </select>
                         <input
                           type="date"
-                          className="p-3 rounded-lg border dark:bg-gray-900 dark:border-gray-700 w-full"
+                          className="p-3 rounded-lg border dark:bg-gray-900 dark:border-gray-700 w-full dark:text-white"
                           value={startDate}
                           onChange={e => setStartDate(e.target.value)}
                         />
                         <input
                           type="date"
-                          className="p-3 rounded-lg border dark:bg-gray-900 dark:border-gray-700 w-full"
+                          className="p-3 rounded-lg border dark:bg-gray-900 dark:border-gray-700 w-full dark:text-white"
                           value={endDate}
                           onChange={e => setEndDate(e.target.value)}
                         />
                       </div>
                       <button
-                        className="flex items-center gap-2 px-6 py-3 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition mt-4 md:mt-0 shadow"
+                        className="flex items-center gap-2 px-6 py-3 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition mt-4 md:mt-0 shadow dark:text-white"
                         onClick={() => {
                           setSelectedCountry('');
                           setSelectedCity('');
@@ -414,25 +406,25 @@ function App() {
                       </button>
                     </div>
                     {/* Section: AQI Trends */}
-                    <div className="mb-10">
+                    <div className="mb-10 dark:text-white">
                       <div className="flex items-center justify-between mb-2">
-                        <h2 className="text-xl font-bold">Air Quality Trends</h2>
-                        <span className="text-gray-400 text-sm">Visualize AQI and pollutant trends for the selected region and time period.</span>
+                        <h2 className="text-xl font-bold dark:text-white">Air Quality Trends</h2>
+                        <span className="text-gray-400 text-sm dark:text-white">Visualize AQI and pollutant trends for the selected region and time period.</span>
                       </div>
                       <div className="bg-gradient-to-br from-blue-50/60 to-white dark:from-gray-900/60 dark:to-gray-800/80 rounded-2xl p-4">
-                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
+                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4 dark:text-white">
                           <ChartSection data={data} pollutant={selectedPollutant} city={selectedCity} />
                         </div>
                       </div>
                     </div>
                     {/* Section: Map */}
-                    <div className="mb-10">
+                    <div className="mb-10 dark:text-white">
                       <div className="flex items-center justify-between mb-2">
-                        <h2 className="text-xl font-bold">Geographical Map</h2>
-                        <span className="text-gray-400 text-sm">See the locations of cities in the dataset. Click a marker for city details.</span>
+                        <h2 className="text-xl font-bold dark:text-white">Geographical Map</h2>
+                        <span className="text-gray-400 text-sm dark:text-white">See the locations of cities in the dataset. Click a marker for city details.</span>
                       </div>
                       <div className="bg-gradient-to-br from-green-50/60 to-white dark:from-gray-900/60 dark:to-gray-800/80 rounded-2xl p-4">
-                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
+                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4 dark:text-white">
                           <MapSection data={data} />
                         </div>
                       </div>
