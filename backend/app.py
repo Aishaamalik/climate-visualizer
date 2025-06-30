@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 import pandas as pd
 import numpy as np
@@ -601,6 +601,13 @@ def pollutant_composition_timelapse():
         city_result['monthly'] = month_data
         results[city] = city_result
     return jsonify(results)
+
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve(path):
+    if path != "" and os.path.exists("../frontend/build/" + path):
+        return send_from_directory('../frontend/build', path)
+    return send_from_directory('../frontend/build', 'index.html')
 
 if __name__ == '__main__':
     app.run(debug=True) 
