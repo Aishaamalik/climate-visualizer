@@ -17,6 +17,8 @@ import 'chartjs-adapter-date-fns';
 import { InformationCircleIcon, ExclamationTriangleIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 import { useNotifications } from '../App';
 
+const BASE_URL = 'https://<your-backend-name>.onrender.com/api'; // TODO: Replace <your-backend-name> with your actual Render backend name
+
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -81,8 +83,8 @@ const ForecastingScreen = () => {
   const { addNotification } = useNotifications();
 
   useEffect(() => {
-    axios.get('/api/cities').then(res => setCities(res.data));
-    axios.get('/api/pollutants').then(res => setPollutants(['AQI', ...res.data]));
+    axios.get(`${BASE_URL}/cities`).then(res => setCities(res.data));
+    axios.get(`${BASE_URL}/pollutants`).then(res => setPollutants(['AQI', ...res.data]));
   }, []);
 
   const fetchForecast = async () => {
@@ -97,14 +99,14 @@ const ForecastingScreen = () => {
     try {
       let res;
       if (showScenario && scenarioReduction > 0) {
-        res = await axios.post('/api/forecast', {
+        res = await axios.post(`${BASE_URL}/forecast`, {
           city: selectedCity,
           pollutant: selectedPollutant,
           periods: 30,
           emission_reduction: { [scenarioPollutant]: scenarioReduction / 100 }
         });
       } else {
-        res = await axios.get('/api/forecast', {
+        res = await axios.get(`${BASE_URL}/forecast`, {
           params: {
             city: selectedCity,
             pollutant: selectedPollutant,

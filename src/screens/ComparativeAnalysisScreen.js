@@ -17,6 +17,8 @@ import {
 import MapSection from '../components/MapSection';
 import { useNotifications } from '../App';
 
+const BASE_URL = 'https://<your-backend-name>.onrender.com/api'; // TODO: Replace <your-backend-name> with your actual Render backend name
+
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -45,7 +47,7 @@ const ComparativeAnalysisScreen = () => {
   const { addNotification } = useNotifications();
 
   useEffect(() => {
-    axios.get(`/api/${mode === 'city' ? 'cities' : 'countries'}`).then(res => {
+    axios.get(`${BASE_URL}/${mode === 'city' ? 'cities' : 'countries'}`).then(res => {
       // Defensive: always map to { value, label }
       const opts = Array.isArray(res.data)
         ? res.data.map(opt => (typeof opt === 'object' && opt.value && opt.label ? opt : { value: opt, label: opt }))
@@ -61,7 +63,7 @@ const ComparativeAnalysisScreen = () => {
     setError('');
     setResults(null);
     try {
-      const res = await axios.post('/api/comparative-analysis', {
+      const res = await axios.post(`${BASE_URL}/comparative-analysis`, {
         mode,
         selections: selected.map(s => s.value),
         benchmark: benchmark,
