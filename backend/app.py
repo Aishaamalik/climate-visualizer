@@ -8,7 +8,7 @@ from scipy.stats import linregress, pearsonr, spearmanr
 from prophet import Prophet
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, origins=["https://aishaamalik.github.io"])
 
 DATA_PATH = os.path.join(os.path.dirname(__file__), 'global_air_quality_dataset.csv')
 
