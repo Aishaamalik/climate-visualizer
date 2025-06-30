@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, createContext } from 'react';
-import { Sun, Moon, UserCircle, Search, Bell, LogOut, HelpCircle, MessageSquare, BarChart2, MapPin, PieChart, Calendar, Activity, TrendingUp } from 'lucide-react';
+import { Sun, Moon, UserCircle, Search, Bell, LogOut, HelpCircle, MessageSquare, BarChart2, MapPin, PieChart, Calendar, Activity, TrendingUp, Menu } from 'lucide-react';
 import { RefreshCw, Filter } from 'lucide-react';
 import './index.css';
 import ChartSection from './components/ChartSection';
@@ -247,6 +247,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (darkMode) {
@@ -301,8 +302,8 @@ function App() {
     <NotificationProvider>
       <Router>
         <div className="flex min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 dark:from-gray-900 dark:to-gray-800">
-          {/* Sidebar */}
-          <aside className="w-64 bg-[#181F3A] text-white flex flex-col justify-between py-6 px-4 rounded-r-3xl shadow-2xl">
+          {/* Sidebar (desktop) */}
+          <aside className="hidden md:flex w-64 bg-[#181F3A] text-white flex-col justify-between py-6 px-4 rounded-r-3xl shadow-2xl">
             <div>
               {/* Logo */}
               <div className="flex items-center gap-3 mb-10 px-2">
@@ -312,13 +313,31 @@ function App() {
               {/* Nav */}
               <SidebarNav />
             </div>
-            
           </aside>
+          {/* Sidebar (mobile drawer) */}
+          {mobileSidebarOpen && (
+            <div className="fixed inset-0 z-50 flex">
+              <div className="w-64 bg-[#181F3A] text-white flex flex-col justify-between py-6 px-4 shadow-2xl h-full">
+                <div>
+                  <div className="flex items-center gap-3 mb-10 px-2">
+                    <div className="bg-orange-400 rounded-full w-12 h-12 flex items-center justify-center text-2xl font-bold">B</div>
+                    <span className="text-2xl font-bold tracking-wide">BreathBetter</span>
+                  </div>
+                  <SidebarNav />
+                </div>
+              </div>
+              <div className="flex-1 bg-black/40" onClick={() => setMobileSidebarOpen(false)}></div>
+            </div>
+          )}
           {/* Main Content */}
-          <div className="flex-1 flex flex-col p-6 md:p-10">
+          <div className="flex-1 flex flex-col p-2 sm:p-4 md:p-10">
             {/* Header */}
             <header className="flex items-center justify-between mb-8 relative">
-              <div>
+              <div className="flex items-center gap-2">
+                {/* Hamburger for mobile */}
+                <button className="md:hidden p-2 rounded-full bg-gray-100 dark:bg-gray-800 mr-2" onClick={() => setMobileSidebarOpen(true)}>
+                  <Menu size={24} className="text-gray-700 dark:text-white" />
+                </button>
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">Welcome Back</h2>
               </div>
               <div className="flex items-center gap-4">
@@ -347,7 +366,7 @@ function App() {
               setSelectedPollutant={setSelectedPollutant}
             />
             {/* Main dashboard area */}
-            <main className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl p-8 flex-1">
+            <main className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl p-2 sm:p-4 md:p-8 flex-1">
               <Routes>
                 <Route path="/" element={
                   <main className="max-w-7xl mx-auto p-2 md:p-4 dark:text-white">

@@ -229,18 +229,20 @@ export default function TemporalPatternsScreen() {
           {extremeEvents.length === 0 ? (
             <div className="text-gray-500 text-sm">No extreme AQI events detected.</div>
           ) : (
-            <table className="w-full text-xs mt-2 dark:text-white">
-              <thead><tr className="text-gray-500 dark:text-white"><th>Date</th><th>AQI</th><th>Note</th></tr></thead>
-              <tbody>
-                {extremeEvents.map(e => (
-                  <tr key={e.date} className="text-red-600 font-semibold dark:text-red-300">
-                    <td>{e.date}</td>
-                    <td>{e.aqi.toFixed(1)}</td>
-                    <td>{e.note}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs mt-2 dark:text-white">
+                <thead><tr className="text-gray-500 dark:text-white"><th>Date</th><th>AQI</th><th>Note</th></tr></thead>
+                <tbody>
+                  {extremeEvents.map(e => (
+                    <tr key={e.date} className="text-red-600 font-semibold dark:text-red-300">
+                      <td>{e.date}</td>
+                      <td>{e.aqi.toFixed(1)}</td>
+                      <td>{e.note}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </section>
         {/* --- Monthly Average AQI (with Extreme Event Markers) --- */}

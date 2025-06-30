@@ -75,7 +75,7 @@ export default function MapSection({ data }) {
 
   return (
     <div className="relative">
-      <MapContainer ref={mapRef} center={[20, 0]} zoom={2} style={{ height: '300px', width: '100%' }} scrollWheelZoom={false}>
+      <MapContainer ref={mapRef} center={[20, 0]} zoom={2} style={{ height: '300px', width: '100%' }} scrollWheelZoom={false} className="w-full h-64 md:h-80">
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
