@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/climate-visualizer/static/css/main.aaab37e5.css",
-    "main.js": "/climate-visualizer/static/js/main.a6f2165d.js",
+    "main.js": "/climate-visualizer/static/js/main.9da00788.js",
     "static/js/453.670e15c7.chunk.js": "/climate-visualizer/static/js/453.670e15c7.chunk.js",
     "index.html": "/climate-visualizer/index.html",
     "main.aaab37e5.css.map": "/climate-visualizer/static/css/main.aaab37e5.css.map",
-    "main.a6f2165d.js.map": "/climate-visualizer/static/js/main.a6f2165d.js.map",
+    "main.9da00788.js.map": "/climate-visualizer/static/js/main.9da00788.js.map",
     "453.670e15c7.chunk.js.map": "/climate-visualizer/static/js/453.670e15c7.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.aaab37e5.css",
-    "static/js/main.a6f2165d.js"
+    "static/js/main.9da00788.js"
   ]
 }
